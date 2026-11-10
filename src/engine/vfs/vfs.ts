@@ -63,6 +63,10 @@ export interface WriteOptions {
   append?: boolean
   /** Mode for a newly created file. Ignored when the file already exists. */
   mode?: number
+  /** Mark the result as a compiled program. Used when copying one. */
+  program?: string
+  /** Reported size of a compiled program. */
+  size?: number
 }
 
 const DEFAULT_FILE_MODE = 0o644
@@ -296,23 +300,29 @@ export class Vfs {
       if (!permits(existing, cred, 'w')) throw new VfsError('EACCES', path)
       existing.content = options.append ? existing.content + content : content
       existing.mtime = now
-      // A compiled program that gets overwritten is just a text file now.
+      // A compiled program that gets overwritten with text is just a text
+      // file now; overwritten with another program, it becomes that program.
       delete existing.program
       delete existing.size
+      if (options.program !== undefined) existing.program = options.program
+      if (options.size !== undefined) existing.size = options.size
       if (cred.uid !== ROOT_UID) existing.mode &= ~(S_ISUID | S_ISGID)
       this.emit('write', path, cred)
       return
     }
 
     this.checkDirWrite(dir, cred, path, undefined)
-    dir.children.set(name, {
+    const created: FileNode = {
       kind: 'file',
       mode: (options.mode ?? DEFAULT_FILE_MODE) & 0o7777,
       uid: cred.uid,
       gid: dir.gid,
       mtime: now,
       content,
-    })
+    }
+    if (options.program !== undefined) created.program = options.program
+    if (options.size !== undefined) created.size = options.size
+    dir.children.set(name, created)
     dir.mtime = now
     this.emit('create', path, cred)
   }
@@ -443,6 +453,22 @@ export class Vfs {
     if (spec.uid !== undefined) dir.uid = spec.uid
     if (spec.gid !== undefined) dir.gid = spec.gid
     if (spec.mtime !== undefined) dir.mtime = spec.mtime
+  }
+
+  /**
+   * Read a file as the system itself: no permission check and no event.
+   * For engine bookkeeping (such as reading the account list), never for
+   * anything done on a player's behalf. Undefined if there is no such file.
+   */
+  peek(path: string): string | undefined {
+    let node: VNode = this.root
+    for (const part of split(path)) {
+      if (node.kind !== 'dir') return undefined
+      const child = node.children.get(part)
+      if (!child) return undefined
+      node = child
+    }
+    return node.kind === 'file' ? node.content : undefined
   }
 
   private ensureDir(path: string, mtime: number | undefined): DirNode {
