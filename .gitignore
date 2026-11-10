@@ -1,0 +1,20 @@
+# Dependencies and build output
+node_modules
+dist
+*.local
+
+# Test output
+test-results
+playwright-report
+blob-report
+coverage
+
+# Logs
+*.log
+
+# Editor and OS files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.sw?
