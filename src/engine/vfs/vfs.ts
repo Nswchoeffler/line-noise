@@ -461,6 +461,30 @@ export class Vfs {
    * anything done on a player's behalf. Undefined if there is no such file.
    */
   peek(path: string): string | undefined {
+    const node = this.find(path)
+    return node?.kind === 'file' ? node.content : undefined
+  }
+
+  /** Metadata for a path, as the system itself: no permission check, no event. */
+  inspect(path: string): Stat | undefined {
+    const node = this.find(path)
+    return node ? statOf(node) : undefined
+  }
+
+  /**
+   * Delete a file, or a directory with everything in it, as the system
+   * itself. Returns false if there was nothing there. The root cannot go.
+   */
+  uninstall(path: string): boolean {
+    const parts = split(path)
+    const name = parts.pop()
+    if (name === undefined) return false
+    const parent = this.find('/' + parts.join('/'))
+    if (parent?.kind !== 'dir') return false
+    return parent.children.delete(name)
+  }
+
+  private find(path: string): VNode | undefined {
     let node: VNode = this.root
     for (const part of split(path)) {
       if (node.kind !== 'dir') return undefined
@@ -468,7 +492,7 @@ export class Vfs {
       if (!child) return undefined
       node = child
     }
-    return node.kind === 'file' ? node.content : undefined
+    return node
   }
 
   private ensureDir(path: string, mtime: number | undefined): DirNode {

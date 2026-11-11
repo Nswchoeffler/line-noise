@@ -713,3 +713,39 @@ describe('snapshot and clone', () => {
     ).toThrow(VfsError)
   })
 })
+
+describe('system-only access', () => {
+  it('peek and inspect ignore permissions and report no events', () => {
+    fs.installDir('/vault', { mode: 0o000 })
+    fs.install('/vault/secret', { content: 's', mode: 0o000 })
+    const events: AccessEvent[] = []
+    fs.subscribe((e) => events.push(e))
+    expect(fs.peek('/vault/secret')).toBe('s')
+    expect(fs.inspect('/vault/secret')).toMatchObject({ kind: 'file', mode: 0 })
+    expect(fs.inspect('/vault')?.kind).toBe('dir')
+    expect(events).toEqual([])
+  })
+
+  it('peek and inspect return undefined for what is not there', () => {
+    expect(fs.peek('/nope')).toBeUndefined()
+    expect(fs.peek('/home/alice')).toBeUndefined()
+    expect(fs.peek('/etc/passwd/x')).toBeUndefined()
+    expect(fs.inspect('/nope')).toBeUndefined()
+  })
+
+  it('uninstall removes files and whole directories without events', () => {
+    const events: AccessEvent[] = []
+    fs.subscribe((e) => events.push(e))
+    expect(fs.uninstall('/home/alice/notes')).toBe(true)
+    expect(fs.uninstall('/home')).toBe(true)
+    expect(fs.inspect('/home/bob')).toBeUndefined()
+    expect(events).toEqual([])
+  })
+
+  it('uninstall reports nothing to remove, and never removes the root', () => {
+    expect(fs.uninstall('/nope')).toBe(false)
+    expect(fs.uninstall('/etc/passwd/x')).toBe(false)
+    expect(fs.uninstall('/')).toBe(false)
+    expect(fs.inspect('/etc/passwd')).toBeDefined()
+  })
+})
