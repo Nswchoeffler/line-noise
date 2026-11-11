@@ -1,16 +1,12 @@
 import { buildWorld, type LoadedGame, type LoadedLevel } from '../engine/levels/loader.ts'
 import { LevelSession, type LevelEvent } from '../engine/levels/runner.ts'
 import type { Card } from '../engine/levels/schema.ts'
+import type { SaveData } from '../engine/save/save.ts'
 import type { ProgramRegistry } from '../engine/shell/types.ts'
 import { TerminalModel } from './terminal/model.ts'
 
 /** What is worth keeping between visits. Small on purpose: see `Game.snapshot`. */
-export interface GameSnapshot {
-  /** Ids of completed levels, in the order they were completed. */
-  completed: string[]
-  /** The level in progress, and everything the player has done in it. */
-  current: { level: string; events: LevelEvent[] } | null
-}
+export type GameSnapshot = SaveData
 
 export interface GameState {
   levelIndex: number

@@ -6,6 +6,7 @@ import { programs } from '../engine/shell/commands/index.ts'
 import { benchShell } from './bench.ts'
 import { Desk } from './Desk.tsx'
 import { Game } from './game.ts'
+import { loadSaved, store } from './storage.ts'
 import { Terminal } from './terminal/Terminal.tsx'
 import { TerminalModel } from './terminal/model.ts'
 
@@ -32,13 +33,25 @@ function Bench() {
  * The game. `?testgame` plays the engine's small story-free test game instead
  * of the real levels: the end-to-end tests of the desk itself run against it.
  */
-function Play({ source }: { source: ContentSource }) {
-  const [game] = useState(() => new Game(loadGame(source), programs))
+function Play({ source, saveKey }: { source: ContentSource; saveKey: string }) {
+  const [game] = useState(() => {
+    // Pick up where this browser left off, and keep the save current from
+    // then on: every command, answer and change of level is stored as it
+    // happens, so closing the page at any moment loses nothing.
+    const game = new Game(loadGame(source), programs, loadSaved(saveKey) ?? undefined)
+    game.subscribe(() => store(saveKey, game.snapshot()))
+    return game
+  })
   return <Desk game={game} />
 }
 
 export function App() {
   const params = new URLSearchParams(window.location.search)
   if (params.has('bench')) return <Bench />
-  return <Play source={params.has('testgame') ? testSource() : contentSource} />
+  // The test game keeps its own save, so trying it never disturbs real progress.
+  return params.has('testgame') ? (
+    <Play source={testSource()} saveKey="line-noise.testgame.save" />
+  ) : (
+    <Play source={contentSource} saveKey="line-noise.save" />
+  )
 }

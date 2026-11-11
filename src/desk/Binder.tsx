@@ -168,6 +168,13 @@ function Help({ game }: { game: Game }) {
         </li>
         <li>Nothing is scored or timed. A wrong answer only means: look again.</li>
       </ul>
+      <h4>Your progress</h4>
+      <ul>
+        <li>
+          Everything you do is saved in this browser as you go. Close the page whenever you like and come back to
+          the same place. Nothing is sent anywhere.
+        </li>
+      </ul>
       <h4>Levels</h4>
       <ul className="level-list">
         {content.levels.map((l, index) => (

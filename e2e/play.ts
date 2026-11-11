@@ -61,8 +61,8 @@ async function rush(page: Page, lines: string[]): Promise<void> {
   }
 }
 
-/** From the first briefing to the briefing of Level 2. */
-export async function finishLevel1(page: Page): Promise<void> {
+/** From the first briefing to the point where Level 1 turns to the logbook. */
+export async function investigateLevel1(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Begin' }).click()
   await rush(page, [
     'pwd',
@@ -80,6 +80,12 @@ export async function finishLevel1(page: Page): Promise<void> {
     'grep pike /usr/adm/usage.log',
     'grep pike ledger',
   ])
+  await expect(page.locator('#entry-account input')).toBeVisible()
+}
+
+/** From the first briefing to the briefing of Level 2. */
+export async function finishLevel1(page: Page): Promise<void> {
+  await investigateLevel1(page)
   await page.locator('#entry-account input').fill('pike')
   await page.locator('#entry-account input').press('Enter')
   for (const [blank, value] of ['3', '23', '1.15'].entries()) {
