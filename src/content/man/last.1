@@ -1,0 +1,21 @@
+LAST(1)
+
+NAME
+     last - list past logins, newest first
+
+SYNOPSIS
+     last [-count] [user or terminal ...]
+
+DESCRIPTION
+     Reads the login records and lists each login: who, on which
+     terminal, where from, when, and for how long.
+
+     With a name, lists only the logins of that user, or the logins on
+     that terminal. -count stops after that many lines.
+
+EXAMPLES
+     last -10
+     last marge
+
+SEE ALSO
+     who(1), finger(1)

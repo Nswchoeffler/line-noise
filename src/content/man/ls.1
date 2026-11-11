@@ -1,0 +1,31 @@
+LS(1)
+
+NAME
+     ls - list files
+
+SYNOPSIS
+     ls [-ladtr] [file ...]
+
+DESCRIPTION
+     Lists what is in a directory: the one you are in, or the ones you
+     name.
+
+     -l     long form: one file per line, with details (see below)
+     -a     include files whose names begin with a dot
+     -d     describe a directory itself, not what is inside it
+     -t     newest first
+     -r     reverse the order
+
+     A line of the long form reads, from left to right:
+
+         -rw-r--r--  1 root  wheel  5120 Aug 29 16:40 ledger
+
+     the kind of file and its permissions; a link count; the owner; the
+     group; the size in characters; when it was last changed; its name.
+
+     The first character is d for a directory and - for a file. The
+     nine after it are three sets of rwx (read, write, run): for the
+     owner, for the group, and for everyone else.
+
+SEE ALSO
+     chmod(1), cd(1)

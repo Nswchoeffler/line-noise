@@ -1,0 +1,20 @@
+# The game as a whole: where the story starts, which hosts exist, and the
+# levels in play order.
+
+title: Line Noise
+
+# Tuesday morning, the day after the Labor Day holiday.
+start: "1986-09-02 08:40"
+
+# The player's own terminal in the machine room office.
+tty: ttyh4
+
+hosts:
+  - world/granite.yaml
+
+levels:
+  - levels/L01-the-discrepancy.yaml
+
+credits:
+  text: Inspired by the 1986 Lawrence Berkeley Laboratory intrusion.
+  url: https://www.exploit-db.com/download/44091

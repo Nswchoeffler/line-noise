@@ -1,0 +1,25 @@
+CUT(1)
+
+NAME
+     cut - pick columns out of each line
+
+SYNOPSIS
+     cut -f fields [-d separator] [file ...]
+     cut -c columns [file ...]
+
+DESCRIPTION
+     Keeps part of every line and drops the rest.
+
+     -f fields     keep these fields. Fields are separated by tabs,
+                   unless -d names another separator.
+     -d c          use the character c as the field separator.
+     -c columns    keep these character positions instead.
+
+     A list may be one number (1), several (1,3) or a range (2-4).
+
+EXAMPLES
+     cut -f1 /usr/adm/usage.log
+     cut -d: -f1 /etc/passwd
+
+SEE ALSO
+     sort(1), uniq(1)

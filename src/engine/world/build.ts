@@ -43,6 +43,9 @@ function installFiles(
   mtime: number | undefined,
 ): void {
   for (const file of files) {
+    if (file.file !== undefined) {
+      throw new Error(`${file.path}: its content file "${file.file}" has not been read in (use the loader)`)
+    }
     const when = file.mtime ?? mtime
     let program: { program: string; size: number } | undefined
     if (file.program !== undefined) {

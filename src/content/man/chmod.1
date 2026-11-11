@@ -1,0 +1,30 @@
+CHMOD(1)
+
+NAME
+     chmod - change who may read, write or run a file
+
+SYNOPSIS
+     chmod mode file ...
+
+DESCRIPTION
+     Every file has three sets of permissions: for its owner (u), for
+     its group (g) and for everyone else (o). Each set can allow
+     reading (r), writing (w) and running (x). ls -l shows them.
+
+     The mode says what to change: who, then + to add or - to take
+     away, then which permission.
+
+         chmod go-w notes       group and others may no longer write
+         chmod u+x script       the owner may now run it
+
+     A mode may also be given as a number, such as 644 or 755.
+
+     The s permission is special. On a program, u+s (setuid) makes the
+     program run with the authority of the owner of the file, whoever
+     starts it. u-s takes that away. In ls -l it shows as an s where
+     the x of the owner would be.
+
+     Only the owner of a file, or root, may change its mode.
+
+SEE ALSO
+     ls(1)

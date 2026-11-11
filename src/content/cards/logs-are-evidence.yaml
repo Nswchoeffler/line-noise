@@ -1,0 +1,36 @@
+id: logs-are-evidence
+title: Logs are evidence
+
+concept: >
+  A log is the system's own record of what happened. When two independent
+  records of the same events disagree, one of them is wrong, and the size of
+  the gap tells you nothing about the size of the cause.
+
+today: >
+  Cloud bills are checked against usage records in the same way, and
+  cost-anomaly alerts flag spending that nobody can account for. An
+  unexplained charge is often the first visible sign of a stolen key or a
+  forgotten machine.
+
+# Checked against the Detection section of the paper. It gives no amount for
+# the error, so neither does this card.
+note: >
+  The 1986 intrusion at Lawrence Berkeley Laboratory was first suspected
+  because of an accounting error. A new account had been created without a
+  billing address, so the lab's own accounting program could not balance its
+  books. Chasing that error, instead of writing it off, is how the lab found
+  its intruder.
+
+source:
+  text: Clifford Stoll, "Stalking the Wily Hacker", Communications of the ACM 31(5), May 1988
+  url: https://www.exploit-db.com/download/44091
+
+simplified: >
+  A real 1986 Unix system kept its accounting in compact binary files that
+  were read with special-purpose programs. Here the records are plain text, so
+  that ordinary tools can read them. The `cut` command belonged to a different
+  family of Unix from the one this lab would have run; it is here because it
+  is the simplest way to pick out a column.
+
+domains: [Security Operations]
+commands: [pwd, cd, ls, cat, head, wc, cut, sort, uniq, diff, grep]

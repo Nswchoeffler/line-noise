@@ -370,6 +370,8 @@ a {
   font: inherit;
   font-family: var(--mono);
   padding: 0.15rem 0.4rem;
+  /* Room for the focus ring, so it never covers the words either side of a blank. */
+  margin: 0 0.25rem;
   border: 0;
   border-bottom: 2px solid var(--ink);
   background: #fff;

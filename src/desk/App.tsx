@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { loadGame } from '../engine/levels/loader.ts'
+import { contentSource } from '../content/index.ts'
+import { loadGame, type ContentSource } from '../engine/levels/loader.ts'
 import { testSource } from '../engine/levels/testing.ts'
 import { programs } from '../engine/shell/commands/index.ts'
 import { benchShell } from './bench.ts'
@@ -27,13 +28,17 @@ function Bench() {
   )
 }
 
-/** The game. For now it plays the engine's small test game; real levels arrive in build step 7. */
-function Play() {
-  const [game] = useState(() => new Game(loadGame(testSource()), programs))
+/**
+ * The game. `?testgame` plays the engine's small story-free test game instead
+ * of the real levels: the end-to-end tests of the desk itself run against it.
+ */
+function Play({ source }: { source: ContentSource }) {
+  const [game] = useState(() => new Game(loadGame(source), programs))
   return <Desk game={game} />
 }
 
 export function App() {
   const params = new URLSearchParams(window.location.search)
-  return params.has('bench') ? <Bench /> : <Play />
+  if (params.has('bench')) return <Bench />
+  return <Play source={params.has('testgame') ? testSource() : contentSource} />
 }

@@ -1,0 +1,244 @@
+# granite: the main computer at Calder Ridge Laboratory, as it stands on the
+# morning of Tuesday 2 September 1986.
+#
+# The August records (usage.log, wtmp, ledger, reconcile.aug) are generated
+# together by tools/gen-world.mjs so that they agree with each other. After
+# changing an account name here, change it there too and run it again.
+
+name: granite
+timezone: PDT
+installed: "1984-11-12 09:30"
+
+groups:
+  - { name: wheel, gid: 0, members: [root, marge] }
+  - { name: staff, gid: 10 }
+  - { name: office, gid: 20, members: [lfaber, marge] }
+
+users:
+  - { name: root, uid: 0, group: wheel, gecos: System Administrator, home: / }
+  - { name: marge, uid: 101, group: staff, gecos: "Marge Okafor, Computing Services" }
+  - { name: hollis, uid: 102, group: staff, gecos: "Edmund Hollis, Theory Division" }
+  - { name: lfaber, uid: 103, group: staff, gecos: "Lena Faber, Front Office" }
+  - { name: jquill, uid: 104, group: staff, gecos: "Jonah Quill, Accelerator Operations" }
+  - { name: tnakata, uid: 105, group: staff, gecos: "Tomo Nakata, Detector Group" }
+  - { name: rvoss, uid: 106, group: staff, gecos: "Ruth Voss, Cryogenics Lab" }
+  - { name: dmbeki, uid: 107, group: staff, gecos: "Daniel Mbeki, Theory Division" }
+  - { name: osato, uid: 108, group: staff, gecos: "Olive Sato, Optics Lab" }
+  - { name: ops, uid: 109, group: staff, gecos: "Systems Manager, Computing Services" }
+  # The account nobody opened. No real name, and no paperwork anywhere.
+  - { name: pike, uid: 110, group: staff }
+
+dirs:
+  - { path: /tmp, mode: "1777" }
+  - { path: /usr/adm, mode: "755" }
+  - { path: /usr/local/billing, owner: lfaber, group: office, mode: "755", mtime: "1986-09-02 07:02" }
+  - { path: /usr/local/billing/requests, owner: lfaber, group: office, mode: "755", mtime: "1986-08-22 10:15" }
+
+files:
+  - path: /etc/motd
+    mtime: "1986-08-29 16:55"
+    content: |
+      Calder Ridge Laboratory, Computing Services
+      granite: 4.2 BSD UNIX
+
+      Tue Sep 2: month-end billing for August has been run.
+      Type "help" for a list of commands.
+
+  # ---- the two sets of books ----
+
+  # System accounting: account, terminal, date, start time, seconds connected.
+  # One line is added each time someone logs out. The last honest write was at
+  # 01:22 on 30 August; the file was changed again at 03:02 on 1 September,
+  # when nobody logged out. Level 2 picks that up.
+  - path: /usr/adm/usage.log
+    mode: "644"
+    mtime: "1986-09-01 03:02"
+    file: world/files/usage.log
+
+  # Login records, read by `last`, `who` and `finger`.
+  - path: /usr/adm/wtmp
+    mode: "644"
+    file: world/files/wtmp
+
+  # The front office's ledger: account, minutes billed, charge, department.
+  - path: /usr/local/billing/ledger
+    owner: lfaber
+    group: office
+    mode: "644"
+    mtime: "1986-08-29 16:40"
+    file: world/files/ledger
+
+  - path: /usr/local/billing/reconcile.aug
+    group: office
+    mode: "644"
+    mtime: "1986-09-02 07:02"
+    file: world/files/reconcile.aug
+
+  # ---- paperwork: one request per approved account ----
+
+  - path: /usr/local/billing/requests/marge
+    owner: lfaber
+    group: office
+    mtime: "1984-11-14 11:00"
+    content: |
+      ACCOUNT REQUEST
+      Account:     marge
+      Name:        Marge Okafor
+      Department:  Computing Services
+      Approved by: L. Faber, Front Office
+      Date:        14 Nov 1984
+  - path: /usr/local/billing/requests/hollis
+    owner: lfaber
+    group: office
+    mtime: "1984-11-20 14:10"
+    content: |
+      ACCOUNT REQUEST
+      Account:     hollis
+      Name:        Edmund Hollis
+      Department:  Theory Division
+      Approved by: L. Faber, Front Office
+      Date:        20 Nov 1984
+  - path: /usr/local/billing/requests/lfaber
+    owner: lfaber
+    group: office
+    mtime: "1984-11-20 14:25"
+    content: |
+      ACCOUNT REQUEST
+      Account:     lfaber
+      Name:        Lena Faber
+      Department:  Front Office
+      Approved by: M. Okafor, Computing Services
+      Date:        20 Nov 1984
+  - path: /usr/local/billing/requests/jquill
+    owner: lfaber
+    group: office
+    mtime: "1985-01-08 09:40"
+    content: |
+      ACCOUNT REQUEST
+      Account:     jquill
+      Name:        Jonah Quill
+      Department:  Accelerator Operations
+      Approved by: L. Faber, Front Office
+      Date:        8 Jan 1985
+  - path: /usr/local/billing/requests/tnakata
+    owner: lfaber
+    group: office
+    mtime: "1985-01-14 15:05"
+    content: |
+      ACCOUNT REQUEST
+      Account:     tnakata
+      Name:        Tomo Nakata
+      Department:  Detector Group
+      Approved by: L. Faber, Front Office
+      Date:        14 Jan 1985
+  - path: /usr/local/billing/requests/rvoss
+    owner: lfaber
+    group: office
+    mtime: "1985-03-04 10:30"
+    content: |
+      ACCOUNT REQUEST
+      Account:     rvoss
+      Name:        Ruth Voss
+      Department:  Cryogenics Lab
+      Approved by: L. Faber, Front Office
+      Date:        4 Mar 1985
+  - path: /usr/local/billing/requests/dmbeki
+    owner: lfaber
+    group: office
+    mtime: "1985-09-16 13:20"
+    content: |
+      ACCOUNT REQUEST
+      Account:     dmbeki
+      Name:        Daniel Mbeki
+      Department:  Theory Division
+      Approved by: L. Faber, Front Office
+      Date:        16 Sep 1985
+  - path: /usr/local/billing/requests/osato
+    owner: lfaber
+    group: office
+    mtime: "1986-02-03 11:45"
+    content: |
+      ACCOUNT REQUEST
+      Account:     osato
+      Name:        Olive Sato
+      Department:  Optics Lab
+      Approved by: L. Faber, Front Office
+      Date:        3 Feb 1986
+  - path: /usr/local/billing/requests/ops
+    owner: lfaber
+    group: office
+    mtime: "1986-08-22 10:15"
+    content: |
+      ACCOUNT REQUEST
+      Account:     ops
+      Name:        Systems Manager (new hire, starts 25 Aug)
+      Department:  Computing Services
+      Approved by: L. Faber, Front Office
+      Date:        22 Aug 1986
+
+  # ---- people ----
+
+  - path: /home/ops/welcome
+    owner: marge
+    mode: "644"
+    mtime: "1986-08-25 08:10"
+    content: |
+      Welcome to Computing Services.
+
+      Your terminal is ttyh4. Mine is ttyh0, next door.
+      The billing records are in /usr/local/billing.
+      The system's own records are in /usr/adm.
+
+      When something looks odd, write it down before you fix it.
+
+                                                  Marge
+
+  - path: /home/hollis/.plan
+    owner: hollis
+    mode: "644"
+    mtime: "1985-08-30 17:20"
+    content: |
+      On sabbatical overseas until summer 1987.
+      Mail is forwarded but will be slow.
+
+  # ---- manual pages ----
+
+  - { path: /usr/man/man1/cat.1, file: man/cat.1 }
+  - { path: /usr/man/man1/cd.1, file: man/cd.1 }
+  - { path: /usr/man/man1/chmod.1, file: man/chmod.1 }
+  - { path: /usr/man/man1/clear.1, file: man/clear.1 }
+  - { path: /usr/man/man1/cp.1, file: man/cp.1 }
+  - { path: /usr/man/man1/cut.1, file: man/cut.1 }
+  - { path: /usr/man/man1/date.1, file: man/date.1 }
+  - { path: /usr/man/man1/diff.1, file: man/diff.1 }
+  - { path: /usr/man/man1/echo.1, file: man/echo.1 }
+  - { path: /usr/man/man1/finger.1, file: man/finger.1 }
+  - { path: /usr/man/man1/grep.1, file: man/grep.1 }
+  - { path: /usr/man/man1/head.1, file: man/head.1 }
+  - { path: /usr/man/man1/last.1, file: man/last.1 }
+  - { path: /usr/man/man1/ls.1, file: man/ls.1 }
+  - { path: /usr/man/man1/man.1, file: man/man.1 }
+  - { path: /usr/man/man1/more.1, file: man/more.1 }
+  - { path: /usr/man/man1/mv.1, file: man/mv.1 }
+  - { path: /usr/man/man1/ps.1, file: man/ps.1 }
+  - { path: /usr/man/man1/pwd.1, file: man/pwd.1 }
+  - { path: /usr/man/man1/rm.1, file: man/rm.1 }
+  - { path: /usr/man/man1/sh.1, file: man/sh.1 }
+  - { path: /usr/man/man1/sort.1, file: man/sort.1 }
+  - { path: /usr/man/man1/tail.1, file: man/tail.1 }
+  - { path: /usr/man/man1/uniq.1, file: man/uniq.1 }
+  - { path: /usr/man/man1/wc.1, file: man/wc.1 }
+  - { path: /usr/man/man1/who.1, file: man/who.1 }
+  - { path: /usr/man/man1/whoami.1, file: man/whoami.1 }
+
+# Three people are already at work; their logins are in wtmp.
+processes:
+  - { pid: 1, user: root, command: init }
+  - { pid: 2, user: root, command: pagedaemon }
+  - { pid: 58, user: root, command: /etc/update }
+  - { pid: 61, user: root, command: /etc/cron }
+  - { pid: 74, user: root, command: /usr/lib/lpd }
+  - { pid: 2210, user: marge, tty: h0, command: "-sh" }
+  - { pid: 2231, user: lfaber, tty: h6, command: "-sh" }
+  - { pid: 2244, user: tnakata, tty: h1, command: "-sh" }
+  - { pid: 2260, user: ops, tty: h4, command: "-sh" }

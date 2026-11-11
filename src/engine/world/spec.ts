@@ -53,16 +53,25 @@ export const DirSpecSchema = z.strictObject({
   mtime: TimeSchema.optional(),
 })
 
-export const FileSpecSchema = z.strictObject({
-  path: z.string().startsWith('/'),
-  owner: z.string().default('root'),
-  group: z.string().optional(),
-  mode: ModeSchema.optional(),
-  mtime: TimeSchema.optional(),
-  content: z.string().default(''),
-  /** Make this file a copy of an engine command, such as a second `sh`. */
-  program: z.string().optional(),
-})
+export const FileSpecSchema = z
+  .strictObject({
+    path: z.string().startsWith('/'),
+    owner: z.string().default('root'),
+    group: z.string().optional(),
+    mode: ModeSchema.optional(),
+    mtime: TimeSchema.optional(),
+    content: z.string().default(''),
+    /**
+     * Take the content from another content file, such as `world/files/ledger`.
+     * For long files that are easier to keep on their own. The loader reads it in.
+     */
+    file: z.string().optional(),
+    /** Make this file a copy of an engine command, such as a second `sh`. */
+    program: z.string().optional(),
+  })
+  .refine((f) => f.file === undefined || f.content === '', {
+    message: 'give either "content" or "file", not both',
+  })
 
 export const LoginSpecSchema = z.strictObject({
   user: z.string(),

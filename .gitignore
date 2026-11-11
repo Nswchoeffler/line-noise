@@ -9,8 +9,9 @@ playwright-report
 blob-report
 coverage
 
-# Logs
+# Logs (but not the simulated ones that are part of the game's world)
 *.log
+!src/content/**/*.log
 
 # Editor and OS files
 .vscode/*

@@ -79,6 +79,36 @@ describe('loading a game', () => {
     )
   })
 
+  it('reads in files whose content is kept in a content file of its own', () => {
+    const host = TEST_FILES['world/box.yaml']! + '  - { path: /data/long, file: world/files/long.txt }\n'
+    const level = TEST_FILES['levels/L02-second.yaml']!.replace(
+      '{ path: /data/new, content: "added in level two\\n" }',
+      '{ path: /data/new, file: world/files/new.txt }',
+    )
+    const g = loadGame(
+      testSource({
+        'world/box.yaml': host,
+        'levels/L02-second.yaml': level,
+        'world/files/long.txt': 'one\ntwo\n',
+        'world/files/new.txt': 'from a file\n',
+      }),
+    )
+    expect(buildWorld(g, 0, programs).host('box').fs.peek('/data/long')).toBe('one\ntwo\n')
+    expect(buildWorld(g, 1, programs).host('box').fs.peek('/data/new')).toBe('from a file\n')
+    expect(buildWorld(g, 1, programs).host('sandbox').fs.peek('/data/new')).toBe('from a file\n')
+  })
+
+  it('names the host file and the path when a content file is missing or doubled up', () => {
+    const missing = TEST_FILES['world/box.yaml']! + '  - { path: /data/long, file: world/files/gone.txt }\n'
+    expect(() => loadGame(testSource({ 'world/box.yaml': missing }))).toThrow(
+      'world/box.yaml: /data/long: content file not found: world/files/gone.txt',
+    )
+    const both = TEST_FILES['world/box.yaml']! + '  - { path: /data/long, file: a.txt, content: "x" }\n'
+    expect(() => loadGame(testSource({ 'world/box.yaml': both, 'a.txt': 'y' }))).toThrow(
+      'either "content" or "file"',
+    )
+  })
+
   it('rejects unknown keys and empty predicates', () => {
     expect(broken('mode: guided', 'mode: guided\ncolour: red')).toThrow('colour')
     expect(broken('when: { read: /data/list }', 'when: { host: box }')).toThrow('must check something')

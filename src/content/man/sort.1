@@ -1,0 +1,23 @@
+SORT(1)
+
+NAME
+     sort - put lines in order
+
+SYNOPSIS
+     sort [-nru] [file ...]
+
+DESCRIPTION
+     Prints the lines of its input in order: digits first, then
+     capitals, then small letters.
+
+     -n     order by the number each line starts with, so 9 comes
+            before 10
+     -r     reverse the order
+     -u     print each different line only once
+
+EXAMPLES
+     cut -f1 /usr/adm/usage.log | sort
+     cut -f1 /usr/adm/usage.log | sort | uniq -c | sort -n
+
+SEE ALSO
+     uniq(1), cut(1)

@@ -1,0 +1,21 @@
+UNIQ(1)
+
+NAME
+     uniq - collapse repeated lines that sit next to each other
+
+SYNOPSIS
+     uniq [-cdu] [file]
+
+DESCRIPTION
+     Where the same line appears several times in a row, prints it
+     once. It only compares neighbours, so sort the input first.
+
+     -c     put in front of each line how many times it appeared
+     -d     print only the lines that were repeated
+     -u     print only the lines that were not
+
+EXAMPLES
+     cut -f1 /usr/adm/usage.log | sort | uniq -c
+
+SEE ALSO
+     sort(1)

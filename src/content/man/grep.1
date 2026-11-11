@@ -1,0 +1,26 @@
+GREP(1)
+
+NAME
+     grep - print lines that match a pattern
+
+SYNOPSIS
+     grep [-ivcn] pattern [file ...]
+
+DESCRIPTION
+     Prints every line that contains the pattern, and nothing else. If
+     no line matches, it prints nothing.
+
+     -i     ignore the difference between capitals and small letters
+     -v     print the lines that do NOT match
+     -c     print only a count of matching lines
+     -n     put the number of each line in front of it
+
+     Put the pattern in quotes if it has spaces in it.
+
+EXAMPLES
+     grep marge /usr/adm/usage.log
+     grep -c ttyh0 /usr/adm/usage.log
+     grep "Aug 25" /usr/adm/usage.log
+
+SEE ALSO
+     cut(1), sort(1)

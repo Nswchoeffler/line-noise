@@ -1,0 +1,25 @@
+DIFF(1)
+
+NAME
+     diff - show the lines that differ between two files
+
+SYNOPSIS
+     diff file1 file2
+
+DESCRIPTION
+     Compares two files line by line and prints only what differs.
+
+         < line      is in file1 only
+         > line      is in file2 only
+
+     The lines of numbers and letters in between say where: 3d2 means
+     line 3 of file1 has no partner in file2; 7a8 means line 8 of file2
+     was added after line 7 of file1; c means the lines changed.
+
+     If the files are the same, diff prints nothing.
+
+EXAMPLES
+     diff /tmp/billed /tmp/used
+
+SEE ALSO
+     sort(1)

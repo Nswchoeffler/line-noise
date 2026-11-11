@@ -14,6 +14,10 @@ file holds the parts that govern every change.
 | `npm test` | Unit tests only (Vitest) |
 | `npm run e2e` | End-to-end tests (Playwright, builds first). Add `-- --project=chromium` for one browser |
 | `npm run build` | Typecheck and build the static site into `dist/` |
+| `node tools/gen-world.mjs` | Regenerate granite's August records (usage log, login records, ledger, month-end report) so they stay in step |
+
+The site also answers at `?testgame` (the engine's story-free test game, used
+by the desk's end-to-end tests) and `?bench` (a bare terminal).
 
 ## Layout
 

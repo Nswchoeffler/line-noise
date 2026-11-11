@@ -1,0 +1,334 @@
+# Level 1: The Discrepancy
+#
+# The month-end books are off by $1.15. The player reads both sets of books,
+# counts usage per account, compares the two lists of accounts, and finds one
+# with time on the computer and no line in the ledger.
+#
+# Every prompt is checked by what it achieved (a file read, a file written,
+# something shown on screen), never by the text of the command.
+
+id: L01-the-discrepancy
+number: 1
+title: The Discrepancy
+mode: guided
+host: granite
+user: ops
+
+brief: |
+  Tuesday 2 September 1986. It is your second week as the newest systems
+  manager at Calder Ridge Laboratory.
+
+  Every month the lab bills its departments for their time on the main
+  computer, `granite`. This morning the month-end report came back with a
+  complaint: the books for August are off by $1.15.
+
+  Nobody upstairs cares about $1.15. Marge Okafor, the senior systems
+  manager, does. She has asked you to find out where it went.
+
+beats:
+  - say:
+      who: Marge
+      text: |
+        Morning. The terminal below is connected to `granite`. You type a
+        command, press Enter, and the computer answers. That is all there is
+        to it.
+
+        I will give you each command and tell you what it means. Type it
+        yourself rather than copying it: fingers learn faster than eyes. You
+        cannot break anything by looking.
+
+  # ---- finding your way ----
+
+  - prompt:
+      who: Marge
+      goal: First, find out where you are.
+      run: pwd
+      explain: |
+        `pwd` stands for "print working directory". A directory is what you
+        may know as a folder. The answer is a path: directories separated by
+        slashes, read from left to right. You start in your own home
+        directory.
+
+  - prompt:
+      who: Marge
+      goal: The billing records are kept in another directory. Go there.
+      run: cd /usr/local/billing
+      explain: |
+        `cd` stands for "change directory", and the path after it says where
+        to go. Nothing is printed when it works. The line under the terminal
+        always shows who and where you are.
+      done: { cwd: /usr/local/billing }
+
+  - prompt:
+      who: Marge
+      goal: See what is in here.
+      run: ls -l
+      explain: |
+        `ls` lists the files in a directory. The `-l` is an option, which
+        changes how a command behaves: this one asks for the long form, one
+        file per line, with its owner, its size and when it was last changed.
+        Options start with a dash.
+      done: { command_ran: ls, touched: /usr/local/billing }
+
+  # ---- two sets of books ----
+
+  - prompt:
+      who: Marge
+      goal: Start with the report that is doing the complaining.
+      run: cat reconcile.aug
+      explain: |
+        `cat` prints a file on the screen. Because you are already in the
+        directory that holds `reconcile.aug`, its name alone is enough.
+      done: { read: /usr/local/billing/reconcile.aug }
+
+  - say:
+      who: Marge
+      text: |
+        There it is. The computer counted 23,025 minutes of use in August.
+        The front office billed for 23,002. Twenty-three minutes that nobody
+        paid for, which at five cents a minute is $1.15.
+
+        Two sets of books, kept by two different hands, that ought to agree
+        and do not. One of them is wrong. Look at both.
+
+  - prompt:
+      who: Marge
+      goal: |
+        The first set of books is the ledger. The front office keeps it: one
+        line for each account they have approved.
+      run: cat ledger
+      explain: |
+        Each line is an account name, the minutes billed, the charge in
+        dollars, and the department that pays. Count the lines: nine
+        accounts.
+      done: { read: /usr/local/billing/ledger }
+
+  - prompt:
+      who: Marge
+      goal: |
+        The second set of books is kept by the computer itself. Every time
+        someone logs out, `granite` adds a line to its usage log. It is a long
+        file, so look at just the top of it.
+      run: head /usr/adm/usage.log
+      explain: |
+        `head` prints the first ten lines of a file. This time you gave the
+        whole path, starting from the top with a slash, because the file is
+        in a different directory. The columns are: account, terminal, date,
+        start time, and seconds connected.
+      done: { read: /usr/adm/usage.log }
+
+  - prompt:
+      who: Marge
+      goal: How long is it?
+      run: wc -l /usr/adm/usage.log
+      explain: |
+        `wc` counts things, and `-l` asks it to count lines. One line per
+        session makes 181 sessions in August. Too many to tally by eye, so
+        let the computer do the counting.
+
+  # ---- counting ----
+
+  - prompt:
+      who: Marge
+      goal: |
+        You only need the first column, the account names. Pull that column
+        out and look at the top of the result.
+      run: cut -f1 /usr/adm/usage.log | head
+      explain: |
+        `cut -f1` keeps the first field of every line and drops the rest. The
+        upright bar `|` is a pipe: it sends what one command prints into the
+        next command instead of onto the screen. Here `cut` feeds `head`.
+
+  - prompt:
+      who: Marge
+      goal: Now count how many sessions each account had.
+      run: cut -f1 /usr/adm/usage.log | sort | uniq -c
+      explain: |
+        Three small tools in a row. `sort` puts the names in order, so that
+        equal names sit together. `uniq -c` squeezes each run of equal lines
+        into one and counts how many there were. The number in front of each
+        name is its number of sessions.
+      done: { command_ran: uniq, output_matches: "\\b3 pike$" }
+
+  - say:
+      who: Marge
+      text: |
+        Nine accounts in the usage log. Nine in the ledger. That looks fine,
+        and it is exactly the kind of fine I do not trust. Are they the same
+        nine?
+
+        Do not answer that by eye. Make two lists and have the computer
+        compare them.
+
+  # ---- comparing ----
+
+  - prompt:
+      who: Marge
+      goal: Save the list of accounts that used the computer.
+      run: cut -f1 /usr/adm/usage.log | sort | uniq > /tmp/used
+      explain: |
+        The same pipeline without the count, and with one new piece: `>`
+        sends the result into a file instead of onto the screen. `/tmp` is a
+        scratch directory that anyone may write in. Nothing is printed. On
+        this system, silence means it worked.
+      # Any way of getting the account names into the file, one per line.
+      done: { file_contains: { path: /tmp/used, matches: "^pike$" } }
+
+  - prompt:
+      who: Marge
+      goal: Now the list of accounts the front office billed.
+      run: cut -f1 ledger | sort > /tmp/billed
+      explain: |
+        The ledger already has one line per account, so there is nothing to
+        squeeze. Sorting both lists the same way is what makes them
+        comparable.
+      done: { file_contains: { path: /tmp/billed, matches: "^hollis$" } }
+
+  - prompt:
+      who: Marge
+      goal: Compare the two lists.
+      run: diff /tmp/billed /tmp/used
+      explain: |
+        `diff` prints only the lines that differ. A line that starts with `<`
+        is in the first file only. A line that starts with `>` is in the
+        second file only. Whatever is in both is left out.
+      done: { output_matches: "^> pike$" }
+
+  - say:
+      who: Marge
+      text: |
+        Two differences. `hollis` is in the ledger and used nothing. That is
+        expected: Ed Hollis has an account and is overseas this year.
+
+        `pike` is the other way round. Time on the computer, and no line in
+        the ledger. That would be your $1.15, if the numbers agree. Check
+        them.
+
+  # ---- the finding ----
+
+  - prompt:
+      who: Marge
+      goal: Pull every line for `pike` out of the usage log.
+      run: grep pike /usr/adm/usage.log
+      explain: |
+        `grep` prints the lines that contain a word, and nothing else. Three
+        sessions. Remember the columns: account, terminal, date, start time,
+        seconds connected.
+      # The account's own lines are on screen, with or without line numbers.
+      done: { read: /usr/adm/usage.log, output_matches: "\\bpike\\s+ttyn1\\s+Aug 24\\b" }
+
+  - prompt:
+      who: Marge
+      goal: And make sure the ledger really has nothing.
+      run: grep pike ledger
+      explain: |
+        When `grep` finds nothing, it prints nothing. An empty answer is
+        still an answer: there is no `pike` in the ledger.
+      # grep reports failure when no line matches, which is the point here.
+      done: { command_ran: grep, failed: true, read: /usr/local/billing/ledger }
+
+  - log:
+      entry: account
+      who: Marge
+      text: |
+        That is a finding. Write it in your logbook, on the right. A finding
+        you have not written down is one you will be arguing about next week.
+
+  - log:
+      entry: time
+      who: Marge
+      text: |
+        Now the amount. Add up the last column of the three `pike` lines:
+        that is seconds. Divide by 60 for minutes, then multiply by five
+        cents.
+
+  - log:
+      entry: first
+      who: Marge
+      text: When did it start? Look at the earliest of the three lines.
+
+  - log:
+      entry: evidence
+      who: Marge
+      text: |
+        Last, attach the proof. In the logbook, choose "Pin a line", then
+        pick the line in the terminal that shows the first `pike` session.
+        With the keyboard, the arrow keys move between lines and Enter pins
+        one.
+
+  - say:
+      who: Marge
+      text: |
+        So the computer was right and the ledger was wrong. Somebody used
+        `granite` for 23 minutes in the small hours, on an account the front
+        office never billed.
+
+        I asked Lena upstairs. She has no paperwork for anyone called pike.
+        Neither do I, and I am the one who creates the accounts.
+
+        The $1.15 is not the problem. The problem is that I do not know who
+        `pike` is. Next, we find out.
+
+objectives:
+  - id: read-both
+    text: Read both sets of books
+    when:
+      all:
+        - { read: /usr/local/billing/ledger }
+        - { read: /usr/adm/usage.log }
+  - id: counted
+    text: Count the sessions for each account
+    when: { command_ran: uniq, output_matches: "\\b3 pike$" }
+  - id: compared
+    text: Compare the accounts in the two sets of books
+    when:
+      any:
+        - { output_matches: "^[<>] pike$" }
+        - { command_ran: grep, failed: true, read: /usr/local/billing/ledger }
+  - id: found
+    text: Name the account with usage and no billing record
+    when: { logged: account }
+
+logbook:
+  - id: account
+    fill: "The account {account} used the computer in August but is not in the billing ledger."
+    blanks:
+      account:
+        accept: [pike]
+        hint: Look for the line that diff marked with a > sign.
+        width: 10
+
+  - id: time
+    fill: "It was connected {sessions} times, for {minutes} minutes in all. At 5 cents a minute that comes to {amount} dollars."
+    blanks:
+      sessions:
+        number: { value: 3 }
+        hint: Count the lines grep printed for this account.
+        width: 4
+      minutes:
+        number: { value: 23 }
+        hint: Add the last column of the three lines, then divide by 60 to turn seconds into minutes.
+        width: 5
+      amount:
+        number: { value: 1.15 }
+        hint: Multiply the minutes by 0.05.
+        width: 6
+
+  - id: first
+    fill: "Its first session began on August {day} at {time}."
+    blanks:
+      day:
+        number: { value: 24 }
+        hint: The third column of the usage log is the date.
+        width: 4
+      time:
+        matches: "^0?3[:.]?05( ?a\\.?m\\.?)?$"
+        hint: The fourth column is the start time, on a 24-hour clock.
+        width: 7
+
+  - id: evidence
+    ask: Pin the usage log line that shows this account's first session.
+    pin: { matches: "\\bpike\\s+ttyn1\\s+Aug 24\\b" }
+    hint: Find the three lines grep printed for this account, and pin the earliest.
+
+debrief: cards/logs-are-evidence.yaml

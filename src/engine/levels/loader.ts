@@ -2,7 +2,7 @@ import { parse as parseYaml } from 'yaml'
 import { z } from 'zod'
 import type { ProgramRegistry } from '../shell/types.ts'
 import { applyOverlay, buildHost } from '../world/build.ts'
-import { HostSpecSchema, parseSpec, TimeSchema, type HostSpec } from '../world/spec.ts'
+import { HostSpecSchema, parseSpec, TimeSchema, type FileSpec, type HostSpec } from '../world/spec.ts'
 import { World } from '../world/world.ts'
 import { CardSchema, LevelSchema, type Card, type Level, type TrayItem } from './schema.ts'
 
@@ -54,8 +54,22 @@ function readYaml(source: ContentSource, path: string): unknown {
   }
 }
 
+/** Read in the contents of files that are kept in content files of their own. */
+function readFileContents(source: ContentSource, files: FileSpec[], label: string): void {
+  for (const file of files) {
+    if (file.file === undefined) continue
+    try {
+      file.content = source(file.file)
+    } catch {
+      throw new Error(`${label}: ${file.path}: content file not found: ${file.file}`)
+    }
+    delete file.file
+  }
+}
+
 export function loadLevel(source: ContentSource, path: string): LoadedLevel {
   const level = parseSpec(LevelSchema, readYaml(source, path), path)
+  for (const overlay of Object.values(level.setup.overlays)) readFileContents(source, overlay.files, path)
   const card = parseSpec(CardSchema, readYaml(source, level.debrief), level.debrief)
   return { level, card, tray: [...level.tray] }
 }
@@ -63,7 +77,11 @@ export function loadLevel(source: ContentSource, path: string): LoadedLevel {
 /** Read a whole game: its hosts and every level, checked for consistency. */
 export function loadGame(source: ContentSource, path = 'game.yaml'): LoadedGame {
   const game = parseSpec(GameSchema, readYaml(source, path), path)
-  const hosts = game.hosts.map((file) => parseSpec(HostSpecSchema, readYaml(source, file), file))
+  const hosts = game.hosts.map((file) => {
+    const host = parseSpec(HostSpecSchema, readYaml(source, file), file)
+    readFileContents(source, host.files, file)
+    return host
+  })
   const levels = game.levels.map((file) => loadLevel(source, file))
 
   const ids = levels.map((l) => l.level.id)
