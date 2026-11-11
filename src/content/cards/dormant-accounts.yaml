@@ -1,0 +1,36 @@
+id: dormant-accounts
+title: Dormant accounts and drifting clocks
+
+concept: >
+  An account that nobody uses is an account that nobody watches, which makes
+  it the door an intruder would choose. And records from two machines can only
+  be compared once they have been put on the same clock.
+
+today: >
+  Access reviews look for orphaned and dormant accounts and switch them off.
+  Machines keep their clocks in step with NTP and stamp their logs in UTC, so
+  that events from different systems line up without arithmetic.
+
+# Checked against the paper: "he seemed to prefer stealing existing unused
+# accounts"; "whenever possible he disabled accounting and audit trails"; "the
+# system clocks had been allowed to drift several minutes".
+note: >
+  The 1986 intruder at Lawrence Berkeley Laboratory seemed to prefer stealing
+  existing, unused accounts to making new ones, and wherever he could he
+  switched off accounting and audit trails so as to leave no trace. The same
+  paper records that the lab's own system clocks had been allowed to drift by
+  several minutes.
+
+source:
+  text: Clifford Stoll, "Stalking the Wily Hacker", Communications of the ACM 31(5), May 1988
+  url: https://www.exploit-db.com/download/44091
+
+simplified: >
+  The game hands you the gateway's six-minute error on a note; a real
+  investigator has to measure it. Login records of the time were a compact
+  binary file, though `last` printed them much as it does here. And the time
+  a file was last changed is weak evidence on its own, because anyone with
+  root's authority can set it to whatever they like.
+
+domains: [Security Operations]
+commands: [last, finger]

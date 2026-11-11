@@ -1,0 +1,14 @@
+shale call log. Times are by the clock on shale.
+Aug 19 10:12  OUT  basalt ttyn0   MeridiaNet 9034 1120 0456   22 min
+Aug 20 14:31  OUT  basalt ttyn0   MeridiaNet 9034 1120 0456   31 min
+Aug 21 02:20  IN   granite ttyn1  MeridiaNet 9051 0440 2718    7 min
+Aug 22 01:56  IN   granite ttyn1  MeridiaNet 9051 0440 2718   50 min
+Aug 22 09:47  IN   basalt ttyn0   MeridiaNet 9021 3300 1090   12 min
+Aug 24 03:11  IN   granite ttyn1  MeridiaNet 9051 0440 2718    7 min
+Aug 25 11:05  IN   basalt ttyn0   MeridiaNet 9021 3300 1090   14 min
+Aug 26 15:22  OUT  basalt ttyn0   MeridiaNet 9034 1120 0456   40 min
+Aug 27 02:46  IN   granite ttyn1  MeridiaNet 9051 0440 2718    9 min
+Aug 28 10:40  IN   basalt ttyn0   MeridiaNet 9021 3300 1090    9 min
+Aug 29 16:03  OUT  basalt ttyn0   MeridiaNet 9077 2051 0933   18 min
+Aug 30 01:21  IN   granite ttyn1  MeridiaNet 9051 0440 2718    7 min
+Sep 01 02:53  IN   granite ttyn1  MeridiaNet 9051 0440 2718   18 min

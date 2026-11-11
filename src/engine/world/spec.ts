@@ -73,6 +73,15 @@ export const FileSpecSchema = z
     message: 'give either "content" or "file", not both',
   })
 
+/**
+ * A new modified time for something that already exists. For files the engine
+ * writes itself, such as /etc/passwd, whose history is part of the story.
+ */
+export const TouchSpecSchema = z.strictObject({
+  path: z.string().startsWith('/'),
+  mtime: TimeSchema,
+})
+
 export const LoginSpecSchema = z.strictObject({
   user: z.string(),
   tty: z.string(),
@@ -102,6 +111,8 @@ export const HostSpecSchema = z.strictObject({
   groups: z.array(GroupSpecSchema).default([]),
   dirs: z.array(DirSpecSchema).default([]),
   files: z.array(FileSpecSchema).default([]),
+  /** Modified times to set once everything is in place. */
+  touch: z.array(TouchSpecSchema).default([]),
   logins: z.array(LoginSpecSchema).default([]),
   processes: z.array(ProcessSpecSchema).default([]),
 })
@@ -112,6 +123,8 @@ export const OverlaySpecSchema = z.strictObject({
   remove: z.array(z.string().startsWith('/')).default([]),
   dirs: z.array(DirSpecSchema).default([]),
   files: z.array(FileSpecSchema).default([]),
+  /** Modified times to set once the files above are in place. */
+  touch: z.array(TouchSpecSchema).default([]),
   logins: z.array(LoginSpecSchema).default([]),
   processes: z.array(ProcessSpecSchema).default([]),
   /** Process ids to drop from the table. */
@@ -122,6 +135,7 @@ export type UserSpec = z.infer<typeof UserSpecSchema>
 export type GroupSpec = z.infer<typeof GroupSpecSchema>
 export type DirSpec = z.infer<typeof DirSpecSchema>
 export type FileSpec = z.infer<typeof FileSpecSchema>
+export type TouchSpec = z.infer<typeof TouchSpecSchema>
 export type LoginSpec = z.infer<typeof LoginSpecSchema>
 export type ProcessSpec = z.infer<typeof ProcessSpecSchema>
 export type HostSpec = z.infer<typeof HostSpecSchema>

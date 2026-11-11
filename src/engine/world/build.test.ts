@@ -188,6 +188,34 @@ describe('applyOverlay', () => {
     expect(host.fs.stat('/home/ann/new', ROOT).uid).toBe(101)
   })
 
+  it('sets when an existing file was last changed, leaving its contents alone', () => {
+    const host = build({
+      ...RAW_HOST,
+      touch: [{ path: '/etc/passwd', mtime: '1986-08-22 02:31' }],
+    })
+    // The generated account list keeps its content and gets its place in the story.
+    expect(host.fs.stat('/etc/passwd', ROOT).mtime).toBe(parseTime('1986-08-22 02:31'))
+    expect(host.fs.readFile('/etc/passwd', ROOT)).toContain('ann:Qx7hashhashAb:101:10:')
+
+    applyOverlay(host, overlay({ touch: [{ path: '/home/ann/notes', mtime: '1986-09-01 03:02' }] }))
+    expect(host.fs.stat('/home/ann/notes', ROOT).mtime).toBe(parseTime('1986-09-01 03:02'))
+    expect(host.fs.readFile('/home/ann/notes', ROOT)).toBe('hello\n')
+  })
+
+  it('refuses to set the time of something that is not there', () => {
+    const host = build()
+    expect(() =>
+      applyOverlay(host, overlay({ touch: [{ path: '/no/such/file', mtime: '1986-09-01 03:02' }] })),
+    ).toThrow('touch /no/such/file: nothing there on box')
+  })
+
+  it('refuses a file whose separate content was never read in', () => {
+    const host = build()
+    expect(() => applyOverlay(host, overlay({ files: [{ path: '/data/long', file: 'world/files/long.txt' }] }))).toThrow(
+      'has not been read in',
+    )
+  })
+
   it('removes files and whole directories, ignoring paths that are not there', () => {
     const host = build()
     applyOverlay(host, overlay({ remove: ['/home/ann', '/usr/local/bin/helper', '/no/such/path'] }))

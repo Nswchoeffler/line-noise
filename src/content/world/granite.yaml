@@ -14,25 +14,27 @@ groups:
   - { name: staff, gid: 10 }
   - { name: office, gid: 20, members: [lfaber, marge] }
 
+# The password field holds each password in scrambled form, as it did on
+# systems of the time. The strings are invented.
 users:
-  - { name: root, uid: 0, group: wheel, gecos: System Administrator, home: / }
-  - { name: marge, uid: 101, group: staff, gecos: "Marge Okafor, Computing Services" }
-  - { name: hollis, uid: 102, group: staff, gecos: "Edmund Hollis, Theory Division" }
-  - { name: lfaber, uid: 103, group: staff, gecos: "Lena Faber, Front Office" }
-  - { name: jquill, uid: 104, group: staff, gecos: "Jonah Quill, Accelerator Operations" }
-  - { name: tnakata, uid: 105, group: staff, gecos: "Tomo Nakata, Detector Group" }
-  - { name: rvoss, uid: 106, group: staff, gecos: "Ruth Voss, Cryogenics Lab" }
-  - { name: dmbeki, uid: 107, group: staff, gecos: "Daniel Mbeki, Theory Division" }
-  - { name: osato, uid: 108, group: staff, gecos: "Olive Sato, Optics Lab" }
-  - { name: ops, uid: 109, group: staff, gecos: "Systems Manager, Computing Services" }
+  - { name: root, uid: 0, group: wheel, password: "Rq7.vLx2mNe0A", gecos: System Administrator, home: / }
+  - { name: marge, uid: 101, group: staff, password: "mK3uY/9sPdT1c", gecos: "Marge Okafor, Computing Services" }
+  - { name: hollis, uid: 102, group: staff, password: "hW8eZb.4QxJ6o", gecos: "Edmund Hollis, Theory Division" }
+  - { name: lfaber, uid: 103, group: staff, password: "Lf2nC0y/GaR5k", gecos: "Lena Faber, Front Office" }
+  - { name: jquill, uid: 104, group: staff, password: "jQ6tHs1.DvM9w", gecos: "Jonah Quill, Accelerator Operations" }
+  - { name: tnakata, uid: 105, group: staff, password: "tN4pXe7/BoK2z", gecos: "Tomo Nakata, Detector Group" }
+  - { name: rvoss, uid: 106, group: staff, password: "rV9aJm3.UcL8f", gecos: "Ruth Voss, Cryogenics Lab" }
+  - { name: dmbeki, uid: 107, group: staff, password: "dM1kSg5/WyE7h", gecos: "Daniel Mbeki, Theory Division" }
+  - { name: osato, uid: 108, group: staff, password: "oS5zFq8.TiN3b", gecos: "Olive Sato, Optics Lab" }
+  - { name: ops, uid: 109, group: staff, password: "Op0wRd6/HuC4x", gecos: "Systems Manager, Computing Services" }
   # The account nobody opened. No real name, and no paperwork anywhere.
-  - { name: pike, uid: 110, group: staff }
+  - { name: pike, uid: 110, group: staff, password: "pZ7cVn2.KgY1s" }
 
 dirs:
   - { path: /tmp, mode: "1777" }
   - { path: /usr/adm, mode: "755" }
   - { path: /usr/local/billing, owner: lfaber, group: office, mode: "755", mtime: "1986-09-02 07:02" }
-  - { path: /usr/local/billing/requests, owner: lfaber, group: office, mode: "755", mtime: "1986-08-22 10:15" }
+  - { path: /usr/local/billing/requests, owner: lfaber, group: office, mode: "755", mtime: "1986-08-18 10:15" }
 
 files:
   - path: /etc/motd
@@ -167,14 +169,14 @@ files:
   - path: /usr/local/billing/requests/ops
     owner: lfaber
     group: office
-    mtime: "1986-08-22 10:15"
+    mtime: "1986-08-18 10:15"
     content: |
       ACCOUNT REQUEST
       Account:     ops
       Name:        Systems Manager (new hire, starts 25 Aug)
       Department:  Computing Services
       Approved by: L. Faber, Front Office
-      Date:        22 Aug 1986
+      Date:        18 Aug 1986
 
   # ---- people ----
 
@@ -230,6 +232,11 @@ files:
   - { path: /usr/man/man1/wc.1, file: man/wc.1 }
   - { path: /usr/man/man1/who.1, file: man/who.1 }
   - { path: /usr/man/man1/whoami.1, file: man/whoami.1 }
+
+# The account list was last changed at 02:31 on 22 August, when the unapproved
+# account was added. Level 2 finds this.
+touch:
+  - { path: /etc/passwd, mtime: "1986-08-22 02:31" }
 
 # Three people are already at work; their logins are in wtmp.
 processes:

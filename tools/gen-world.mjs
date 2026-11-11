@@ -5,8 +5,10 @@
 //   src/content/world/files/ledger         the front office's billing ledger:
 //                                          account, minutes, charge, department
 //   src/content/world/files/reconcile.aug  the month-end report that does not balance
+//   src/content/world/files/gateway.log    calls through the gateway "shale", by its
+//                                          own clock, which runs six minutes fast
 //
-// All four come from one list of sessions, so they always agree with each
+// All five come from one list of sessions, so they always agree with each
 // other except in the ways the story needs. The output is deterministic:
 // running this again produces the same files. Run it after changing names:
 //
@@ -184,6 +186,48 @@ const reconcile =
   'Every minute in the system accounting should be billed to an account\n' +
   'in the ledger. Rate: 5 cents per connect minute.\n'
 
+// ---- the gateway's call log ----------------------------------------------------
+//
+// shale passes calls between the lab and the carrier network. Every login on
+// granite's network line (ttyn1) arrived as a call through it, so each one has
+// a line here, stamped by shale's clock: six minutes ahead of granite's.
+
+const GATEWAY_FAST = 6 * 60
+const CARRIER = 'MeridiaNet'
+// Calling addresses are invented. They start with 9, which no real network uses.
+const INTRUDER_ADDRESS = '9051 0440 2718'
+
+const calls = [
+  // The calls that reached granite: the same far end every time.
+  ...[...sessions, ...SCRUBBED]
+    .filter((s) => s.from === 'shale')
+    .map((s) => ({ start: s.start, minutes: s.seconds / 60, direction: 'IN', from: `${CARRIER} ${INTRUDER_ADDRESS}`, to: 'granite ttyn1' })),
+  // Ordinary traffic: staff calling out, and collaborators calling the second machine.
+  { start: at(8, 19, 10, 6), minutes: 22, direction: 'OUT', from: 'basalt ttyn0', to: `${CARRIER} 9034 1120 0456` },
+  { start: at(8, 20, 14, 25), minutes: 31, direction: 'OUT', from: 'basalt ttyn0', to: `${CARRIER} 9034 1120 0456` },
+  { start: at(8, 22, 9, 41), minutes: 12, direction: 'IN', from: `${CARRIER} 9021 3300 1090`, to: 'basalt ttyn0' },
+  { start: at(8, 25, 10, 59), minutes: 14, direction: 'IN', from: `${CARRIER} 9021 3300 1090`, to: 'basalt ttyn0' },
+  { start: at(8, 26, 15, 16), minutes: 40, direction: 'OUT', from: 'basalt ttyn0', to: `${CARRIER} 9034 1120 0456` },
+  { start: at(8, 28, 10, 34), minutes: 9, direction: 'IN', from: `${CARRIER} 9021 3300 1090`, to: 'basalt ttyn0' },
+  { start: at(8, 29, 15, 57), minutes: 18, direction: 'OUT', from: 'basalt ttyn0', to: `${CARRIER} 9077 2051 0933` },
+].sort((a, b) => a.start - b.start)
+
+const callLine = (c) => {
+  const t = c.start + GATEWAY_FAST
+  // Start, direction, the lab's line, the far end, length. Narrow enough for
+  // an 80-column terminal.
+  const [line, farEnd] = c.direction === 'IN' ? [c.to, c.from] : [c.from, c.to]
+  const columns = [
+    `${dateOf(t)} ${clockOf(t)}`,
+    c.direction.padEnd(3),
+    line.padEnd(13),
+    farEnd.padEnd(25),
+    `${String(c.minutes).padStart(3)} min`,
+  ]
+  return columns.join('  ') + '\n'
+}
+const gatewayLog = 'shale call log. Times are by the clock on shale.\n' + calls.map(callLine).join('')
+
 // ---- write ---------------------------------------------------------------------
 
 mkdirSync(OUT, { recursive: true })
@@ -191,9 +235,11 @@ writeFileSync(join(OUT, 'usage.log'), usageLog)
 writeFileSync(join(OUT, 'wtmp'), wtmp)
 writeFileSync(join(OUT, 'ledger'), ledger)
 writeFileSync(join(OUT, 'reconcile.aug'), reconcile)
+writeFileSync(join(OUT, 'gateway.log'), gatewayLog)
 
 console.log(`usage.log: ${byEnd.length} lines`)
 console.log(`wtmp: ${logins.length} records`)
+console.log(`gateway.log: ${calls.length} calls`)
 console.log(`used ${usedMinutes} min, billed ${billedMinutes} min, gap ${gap} min = $${dollars(gap)}`)
 console.log(`last usage line ends ${dateOf(byEnd.at(-1).start)} ${clockOf(byEnd.at(-1).start + byEnd.at(-1).seconds)}`)
 for (const a of ACCOUNTS) console.log(`  ${a.user.padEnd(8)} ${String(minutesFor(a.user)).padStart(6)} min`)

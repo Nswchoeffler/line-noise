@@ -120,9 +120,9 @@ test('Level 1 can be played from briefing to debrief with the keyboard alone', a
     'href',
     'https://www.exploit-db.com/download/44091',
   )
-  await expect(page.getByRole('button', { name: 'Finish' })).toBeFocused()
+  await expect(page.getByRole('button', { name: 'Next level' })).toBeFocused()
   await page.keyboard.press('Enter')
-  await expect(page.getByRole('heading', { name: 'That is every level so far' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'The Account Nobody Opened' })).toBeVisible()
 })
 
 test('the binder holds the manual for the commands on granite', async ({ page }) => {

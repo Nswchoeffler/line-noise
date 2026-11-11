@@ -455,6 +455,14 @@ export class Vfs {
     if (spec.mtime !== undefined) dir.mtime = spec.mtime
   }
 
+  /** Set when something was last changed, as the system itself. Returns false if nothing is there. */
+  setModified(path: string, mtime: number): boolean {
+    const node = this.find(path)
+    if (!node) return false
+    node.mtime = mtime
+    return true
+  }
+
   /**
    * Read a file as the system itself: no permission check and no event.
    * For engine bookkeeping (such as reading the account list), never for

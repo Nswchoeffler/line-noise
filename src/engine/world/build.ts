@@ -3,7 +3,7 @@ import type { ProgramRegistry } from '../shell/types.ts'
 import type { Clock } from './clock.ts'
 import { Host } from './host.ts'
 import { formatLogins, LOGIN_RECORDS_PATH, parseLogins, type LoginRecord } from './logins.ts'
-import type { DirSpec, FileSpec, HostSpec, LoginSpec, OverlaySpec, ProcessSpec } from './spec.ts'
+import type { DirSpec, FileSpec, HostSpec, LoginSpec, OverlaySpec, ProcessSpec, TouchSpec } from './spec.ts'
 import { formatGroup, formatPasswd } from './users.ts'
 
 export interface BuildOptions {
@@ -64,6 +64,14 @@ function installFiles(
       ...(when === undefined ? {} : { mtime: when }),
       ...program,
     })
+  }
+}
+
+function setModifiedTimes(host: Host, touches: readonly TouchSpec[]): void {
+  for (const touch of touches) {
+    if (!host.fs.setModified(touch.path, touch.mtime)) {
+      throw new Error(`touch ${touch.path}: nothing there on ${host.name}`)
+    }
   }
 }
 
@@ -143,6 +151,7 @@ export function buildHost(spec: HostSpec, options: BuildOptions): Host {
 
   installDirs(host, spec.dirs, installed)
   installFiles(host, spec.files, options.programs, installed)
+  setModifiedTimes(host, spec.touch)
   addLogins(host, spec.logins)
   addProcesses(host, spec.processes)
   return host
@@ -150,13 +159,14 @@ export function buildHost(spec: HostSpec, options: BuildOptions): Host {
 
 /**
  * Change an existing host the way a level asks: remove paths, then add or
- * replace directories, files, login records and processes. This is setup, not
+ * replace directories, files, modified times, login records and processes. This is setup, not
  * play: nothing here is reported as file access.
  */
 export function applyOverlay(host: Host, overlay: OverlaySpec, programs?: ProgramRegistry): void {
   for (const path of overlay.remove) host.fs.uninstall(path)
   installDirs(host, overlay.dirs, undefined)
   installFiles(host, overlay.files, programs, undefined)
+  setModifiedTimes(host, overlay.touch)
   addLogins(host, overlay.logins)
   host.processes = host.processes.filter((p) => !overlay.endProcesses.includes(p.pid))
   addProcesses(host, overlay.processes)

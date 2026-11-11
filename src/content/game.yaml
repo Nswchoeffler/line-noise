@@ -14,6 +14,7 @@ hosts:
 
 levels:
   - levels/L01-the-discrepancy.yaml
+  - levels/L02-the-account-nobody-opened.yaml
 
 credits:
   text: Inspired by the 1986 Lawrence Berkeley Laboratory intrusion.

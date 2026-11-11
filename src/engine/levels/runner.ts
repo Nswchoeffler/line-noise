@@ -123,6 +123,7 @@ export class LevelSession implements TerminalBackend {
       remove: [],
       dirs: [],
       files: [],
+      touch: [],
       logins: [{ user, tty: this.tty, from: '', login: this.world.clock.now }],
       processes: [],
       endProcesses: [],

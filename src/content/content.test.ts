@@ -34,6 +34,54 @@ function showing(session: LevelSession): string {
   return Object.keys(beat)[0]!
 }
 
+/**
+ * Play the terminal part of a level, typing one of `lines` at each prompt in
+ * place of the suggestion and pressing Continue whenever someone speaks.
+ * Stops at the logbook, or at the first line that does not satisfy its prompt.
+ */
+function play(session: LevelSession, lines: readonly string[]): void {
+  session.begin()
+  let next = 0
+  for (let guard = 0; guard < 100; guard++) {
+    const beat = session.getState().beat
+    if (!beat || 'log' in beat) return
+    if ('say' in beat) {
+      session.continue()
+      continue
+    }
+    const line = lines[next++]
+    if (line === undefined) return
+    const prompt = showing(session)
+    session.run(line)
+    if (showing(session) === prompt) return
+  }
+  throw new Error('the level did not reach its logbook')
+}
+
+/**
+ * Play the terminal part of a level by typing exactly what is suggested.
+ * Every suggestion must run without complaint and move the level on.
+ * Returns the lines typed.
+ */
+function followSuggestions(session: LevelSession): string[] {
+  session.begin()
+  const suggested: string[] = []
+  for (let guard = 0; guard < 100; guard++) {
+    const beat = session.getState().beat
+    if (!beat || 'log' in beat) return suggested
+    if ('say' in beat) {
+      session.continue()
+      continue
+    }
+    const line = showing(session)
+    suggested.push(line)
+    const record = session.run(line)
+    expect(record.output.filter((c) => c.stream === 'err'), line).toEqual([])
+    expect(showing(session), `after: ${line}`).not.toBe(line)
+  }
+  throw new Error('the level did not reach its logbook')
+}
+
 beforeEach(() => {
   game = loadGame(contentSource)
 })
@@ -42,7 +90,10 @@ describe('the world', () => {
   it('loads, with granite as the only host so far', () => {
     expect(game.game.title).toBe('Line Noise')
     expect(game.hosts.map((h) => h.name)).toEqual(['granite'])
-    expect(game.levels.map((l) => l.level.id)).toEqual(['L01-the-discrepancy'])
+    expect(game.levels.map((l) => l.level.id)).toEqual([
+      'L01-the-discrepancy',
+      'L02-the-account-nobody-opened',
+    ])
   })
 
   it('has the accounts the brief lists', () => {
@@ -122,29 +173,8 @@ describe('Level 1: The Discrepancy', () => {
     'grep pike ledger',
   ]
 
-  /**
-   * Play the terminal part of the level, typing one of `lines` at each prompt
-   * in place of the suggestion. Stops at the logbook, or at the first line
-   * that does not satisfy its prompt.
-   */
-  function investigate(session: LevelSession, lines: readonly string[] = SUGGESTED): void {
-    session.begin()
-    let next = 0
-    for (let guard = 0; guard < 100; guard++) {
-      const beat = session.getState().beat
-      if (!beat || 'log' in beat) return
-      if ('say' in beat) {
-        session.continue()
-        continue
-      }
-      const line = lines[next++]
-      if (line === undefined) return
-      const prompt = showing(session)
-      session.run(line)
-      if (showing(session) === prompt) return
-    }
-    throw new Error('the level did not reach its logbook')
-  }
+  const investigate = (session: LevelSession, lines: readonly string[] = SUGGESTED): void =>
+    play(session, lines)
 
   function fillLogbook(session: LevelSession): void {
     session.answer('account', { kind: 'fill', values: { account: 'pike' } })
@@ -155,23 +185,7 @@ describe('Level 1: The Discrepancy', () => {
 
   it('suggests each command in turn, and each suggestion does its job', () => {
     const session = start(0)
-    session.begin()
-    const suggested: string[] = []
-    for (let guard = 0; guard < 100; guard++) {
-      const beat = session.getState().beat
-      if (!beat || 'log' in beat) break
-      if ('say' in beat) {
-        session.continue()
-        continue
-      }
-      const line = showing(session)
-      suggested.push(line)
-      const record = session.run(line)
-      expect(record.output.filter((c) => c.stream === 'err'), line).toEqual([])
-      // One line is enough to move on from every prompt.
-      expect(showing(session), `after: ${line}`).not.toBe(line)
-    }
-    expect(suggested).toEqual(SUGGESTED)
+    expect(followSuggestions(session)).toEqual(SUGGESTED)
     expect(showing(session)).toBe('log:account')
   })
 
@@ -317,5 +331,198 @@ describe('Level 1: The Discrepancy', () => {
     for (const event of session.events) replay.apply(event)
     expect(replay.getState()).toEqual(session.getState())
     expect(showing(replay)).toBe('log:time')
+  })
+})
+
+describe('Level 2: The Account Nobody Opened', () => {
+  const SUGGESTED = [
+    'grep pike /etc/passwd',
+    'ls /usr/local/billing/requests',
+    'ls -l /etc/passwd',
+    'last pike',
+    'last ttyn1',
+    'finger hollis',
+    'ls -l /usr/adm/usage.log',
+    'grep hollis /usr/adm/usage.log',
+    'grep ttyn1 /usr/adm/gateway.log',
+  ]
+
+  /** Seconds since 1970 for a time in 1986 on a host's own clock. */
+  const at = (month: string, day: number, hour: number, minute: number): number =>
+    Date.UTC(1986, ['Aug', 'Sep'].indexOf(month) + 7, day, hour, minute) / 1000
+
+  function fillTimeline(session: LevelSession): void {
+    session.answer('dormant', { kind: 'fill', values: { time: '02:14', account: 'hollis' } })
+    session.answer('created', { kind: 'fill', values: { time: '02:31' } })
+    session.answer('first-use', { kind: 'fill', values: { day: '24', time: '03:05' } })
+    session.answer('gateway', { kind: 'fill', values: { gateway: '02:53', corrected: '02:47' } })
+    session.answer('edit', { kind: 'fill', values: { time: '03:02', owner: 'root' } })
+  }
+
+  it('starts after lunch the same day, with the morning in the login records', () => {
+    const session = start(1)
+    expect(out(session, 'date')).toBe('Tue Sep  2 13:10:00 PDT 1986\n')
+    expect(out(session, 'last ops')).toMatch(/^ops\s+ttyh4\s+Tue Sep  2 08:40 - 12:05/m)
+    expect(out(session, 'who')).toMatch(/^ops\s+ttyh4\s+Sep  2 13:10/m)
+  })
+
+  it('rests on facts that hold in the world', () => {
+    const fs = buildWorld(game, 1, programs).host('granite').fs
+    const logins = fs
+      .peek('/usr/adm/wtmp')!
+      .trim()
+      .split('\n')
+      .map((line) => line.split(':'))
+      .map(([user, tty, from, login, logout]) => ({ user, tty, from, login: Number(login), logout: Number(logout) }))
+    const network = logins.filter((l) => l.tty === 'ttyn1')
+
+    // Only two accounts ever used the network line, always through the gateway, always at night.
+    expect([...new Set(network.map((l) => l.user))].sort()).toEqual(['hollis', 'pike'])
+    for (const l of network) {
+      expect(l.from).toBe('shale')
+      expect(new Date(l.login * 1000).getUTCHours()).toBeLessThan(4)
+    }
+
+    // The password file changed inside a hollis session, before pike's first login.
+    const changed = fs.inspect('/etc/passwd')!.mtime
+    expect(changed).toBe(at('Aug', 22, 2, 31))
+    expect(network.some((l) => l.user === 'hollis' && l.login < changed && changed < l.logout)).toBe(true)
+    expect(Math.min(...network.filter((l) => l.user === 'pike').map((l) => l.login))).toBeGreaterThan(changed)
+
+    // The usage log changed while hollis was the only one logged in, and it is root's alone to write.
+    const edited = fs.inspect('/usr/adm/usage.log')!
+    expect(edited.mtime).toBe(at('Sep', 1, 3, 2))
+    expect(edited.uid).toBe(0)
+    expect(edited.mode & 0o022).toBe(0)
+    expect(logins.filter((l) => l.login < edited.mtime && edited.mtime < l.logout).map((l) => l.user)).toEqual([
+      'hollis',
+    ])
+
+    // hollis is in the login records and gone from the usage log; pike was left in.
+    const usage = fs.peek('/usr/adm/usage.log')!
+    expect(usage).not.toContain('hollis')
+    expect(usage.match(/^pike/gm)).toHaveLength(3)
+
+    // Every login on the network line is a call in the gateway's log, six minutes later by its clock.
+    const calls = fs
+      .peek('/usr/adm/gateway.log')!
+      .split('\n')
+      .filter((line) => line.includes('granite ttyn1'))
+      .map((line) => {
+        const [month, day, clock, direction] = line.split(/\s+/)
+        const [hour, minute] = clock!.split(':').map(Number)
+        return { time: at(month!, Number(day), hour!, minute!), direction }
+      })
+    expect(calls.map((c) => c.time)).toEqual(network.map((l) => l.login + 6 * 60))
+    expect(calls.every((c) => c.direction === 'IN')).toBe(true)
+  })
+
+  it('suggests each command in turn, and each suggestion does its job', () => {
+    const session = start(1)
+    expect(followSuggestions(session)).toEqual(SUGGESTED)
+    expect(showing(session)).toBe('log:dormant')
+  })
+
+  it('puts each note in the tray when it becomes relevant', () => {
+    const session = start(1)
+    const tray = (): string[] => session.getState().tray.map((t) => t.id)
+    play(session, SUGGESTED.slice(0, 4))
+    expect(tray()).toEqual([])
+    session.run('last ttyn1')
+    expect(tray()).toEqual(['hollis-note'])
+    session.continue()
+    session.run('finger hollis')
+    session.continue()
+    session.run('ls -l /usr/adm/usage.log')
+    session.run('grep hollis /usr/adm/usage.log')
+    expect(tray()).toEqual(['hollis-note'])
+    session.continue()
+    expect(tray()).toEqual(['hollis-note', 'clock-note'])
+  })
+
+  it('can be played from briefing to debrief', () => {
+    const session = start(1)
+    play(session, SUGGESTED)
+    fillTimeline(session)
+    expect(showing(session)).toBe('log:suspects')
+    session.answer('suspects', { kind: 'choose', chosen: ['pike', 'hollis'] })
+    const listing = session.commandRecords
+      .find((r) => r.line === 'ls -l /usr/adm/usage.log')!
+      .output.map((c) => c.text)
+      .join('')
+      .trimEnd()
+    session.answer('root-proof', { kind: 'pin', text: listing, source: 'terminal' })
+    expect(showing(session)).toBe('say')
+    session.continue()
+
+    const state = session.getState()
+    expect(state.objectives.filter((o) => !o.met)).toEqual([])
+    expect(state.phase).toBe('debrief')
+    expect(session.loaded.card.title).toBe('Dormant accounts and drifting clocks')
+  })
+
+  it('accepts other ways of doing each step', () => {
+    const session = start(1)
+    play(session, [
+      'cat /etc/passwd',
+      'cd /usr/local/billing; ls -l requests',
+      'ls -l /etc',
+      'last | grep pike',
+      'last | grep shale',
+      'finger hollis pike',
+      'ls -lt /usr/adm',
+      'grep -c hollis /usr/adm/usage.log',
+      'cat /usr/adm/gateway.log',
+    ])
+    expect(`${showing(session)} (last line: ${session.commandRecords.at(-1)?.line})`).toBe(
+      'log:dormant (last line: cat /usr/adm/gateway.log)',
+    )
+    expect(session.getState().objectives.filter((o) => !o.met).map((o) => o.id)).toEqual(['lined-up'])
+  })
+
+  it('wants the timeline on granite time, not the gateway clock', () => {
+    const session = start(1)
+    play(session, SUGGESTED)
+
+    // The gateway's own time for the first call is six minutes late.
+    const late = session.answer('dormant', { kind: 'fill', values: { time: '02:20', account: 'hollis' } })
+    expect(late.blanks).toEqual({ time: false, account: true })
+    expect(late.hint).toContain('not the gateway')
+    session.answer('dormant', { kind: 'fill', values: { time: '2:14 am', account: 'Hollis' } })
+    session.answer('created', { kind: 'fill', values: { time: '02:31' } })
+    session.answer('first-use', { kind: 'fill', values: { day: '24', time: '03:05' } })
+
+    // Adding the six minutes instead of taking them off.
+    const added = session.answer('gateway', { kind: 'fill', values: { gateway: '02:53', corrected: '02:59' } })
+    expect(added.blanks).toEqual({ gateway: true, corrected: false })
+    expect(added.hint).toContain('take six minutes off')
+    expect(session.answer('gateway', { kind: 'fill', values: { gateway: '02:53', corrected: '02:47' } }).correct).toBe(
+      true,
+    )
+    expect(session.getState().objectives.find((o) => o.id === 'lined-up')?.met).toBe(true)
+  })
+
+  it('tells logging in as root apart from having its authority', () => {
+    const session = start(1)
+    play(session, SUGGESTED)
+    fillTimeline(session)
+    const wrong = session.answer('suspects', { kind: 'choose', chosen: ['pike', 'root'] })
+    expect(wrong).toMatchObject({ correct: false, hint: expect.stringContaining('not the same as logging in as root') })
+    expect(session.answer('suspects', { kind: 'choose', chosen: ['hollis', 'pike'] }).correct).toBe(true)
+  })
+
+  it('takes either changed file as proof, and nothing else', () => {
+    const pin = (text: string): boolean => {
+      const session = start(1)
+      play(session, SUGGESTED)
+      fillTimeline(session)
+      session.answer('suspects', { kind: 'choose', chosen: ['hollis', 'pike'] })
+      return session.answer('root-proof', { kind: 'pin', text, source: 'terminal' }).correct
+    }
+    expect(pin('-rw-r--r--  1 root     wheel       5569 Sep  1 03:02 /usr/adm/usage.log')).toBe(true)
+    expect(pin('-rw-r--r--  1 root     wheel       5569 Sep  1 03:02 usage.log')).toBe(true)
+    expect(pin('-rw-r--r--  1 root     wheel        799 Aug 22 02:31 /etc/passwd')).toBe(true)
+    expect(pin('hollis    ttyn1    shale            Mon Sep  1 02:47 - 03:05  (00:18)')).toBe(false)
+    expect(pin('-rw-r--r--  1 marge    staff       1154 Sep  2 11:40 gateway.log')).toBe(false)
   })
 })
