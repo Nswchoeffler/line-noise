@@ -1,5 +1,6 @@
 import { completeLine } from '../../engine/shell/complete.ts'
-import type { CommandRecord, Shell } from '../../engine/shell/session.ts'
+import type { TerminalBackend } from '../../engine/levels/runner.ts'
+import type { CommandRecord } from '../../engine/shell/session.ts'
 
 export type LineKind = 'input' | 'out' | 'err' | 'info'
 
@@ -62,7 +63,7 @@ function inColumns(names: string[]): string[] {
  * forwards keys.
  */
 export class TerminalModel {
-  private shell: Shell
+  private shell: TerminalBackend
   private readonly pageSize: number
   private readonly onRecord: ((record: CommandRecord) => void) | undefined
   private readonly listeners = new Set<() => void>()
@@ -79,7 +80,7 @@ export class TerminalModel {
   private cursorRequest: number | null = null
   private state: TerminalState
 
-  constructor(shell: Shell, options: TerminalOptions = {}) {
+  constructor(shell: TerminalBackend, options: TerminalOptions = {}) {
     this.shell = shell
     this.pageSize = options.pageSize ?? 22
     this.onRecord = options.onRecord
@@ -127,7 +128,7 @@ export class TerminalModel {
   }
 
   /** Attach to a different session (another host), keeping the scrollback. */
-  attach(shell: Shell): void {
+  attach(shell: TerminalBackend): void {
     this.shell = shell
     this.input = ''
     this.historyIndex = null
