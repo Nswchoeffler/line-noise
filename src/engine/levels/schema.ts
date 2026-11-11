@@ -125,8 +125,13 @@ const PromptBeat = z.strictObject({
     goal: z.string(),
     /** The command to type. */
     run: z.string(),
-    /** What the command means, piece by piece. */
+    /** What the command does, piece by piece. Shown before it is typed. */
     explain: z.string(),
+    /**
+     * What the output means. Shown once the step is done, at the top of
+     * whatever comes next, so the player can read it beside the output.
+     */
+    result: z.string().optional(),
     done: PredicateSchema.optional(),
   }),
 })
@@ -173,8 +178,10 @@ const BlankSchema = z
     matches: z.string().optional(),
     /** A number, with an allowed margin either way. */
     number: z.strictObject({ value: z.number(), tolerance: z.number().min(0).default(0) }).optional(),
-    /** Shown after a wrong answer. Points at where to look, never at the answer. */
+    /** Where to look. Shown on request, and after a wrong answer. Never gives the answer away. */
     hint: z.string().optional(),
+    /** What goes in the blank, shown under it: "account name", "hh:mm". */
+    label: z.string().optional(),
     /** Width of the blank in characters. */
     width: z.number().int().positive().default(12),
   })

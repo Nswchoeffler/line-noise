@@ -80,10 +80,14 @@ beats:
       goal: Every account on `granite` is one line in the password file. Find this one.
       run: grep pike /etc/passwd
       explain: |
-        The fields are separated by colons: account name, password (scrambled,
-        so that it cannot be read back), user number, group number, real
-        name, home directory, and shell. Look at the fifth field, between the
-        two colons that touch. Everyone else has a name there.
+        `grep` prints only the lines of a file that contain a word. Here the
+        word is the account name, and the file is the list of accounts.
+      result: |
+        The line is split into fields by colons. In order: account name,
+        password (scrambled, so that it cannot be read back), user number,
+        group number, real name, home directory, and the shell it starts. The
+        real name is empty: two colons touch where it should be. Every other
+        account has a name there.
       done: { read: /etc/passwd, output_matches: "\\bpike:" }
 
   - prompt:
@@ -91,8 +95,10 @@ beats:
       goal: Now the paperwork. The front office keeps one request file for each account it has approved.
       run: ls /usr/local/billing/requests
       explain: |
-        Nine files, one for each account in the ledger. No `pike`. Lena was
-        right.
+        `ls` without `-l` lists just the names of the files in a directory.
+      result: |
+        Nine files, one for each account in the ledger, named after the
+        account. There is no `pike`. Lena was right: nobody asked for it.
       done: { command_ran: ls, touched: /usr/local/billing/requests }
 
   - prompt:
@@ -102,10 +108,13 @@ beats:
         was that file last changed?
       run: ls -l /etc/passwd
       explain: |
-        The date and time in a long listing say when a file was last changed.
-        I add accounts in the daytime, and the last one I added was yours, on
-        the morning of the 18th. This says half past two at night, four days
-        later.
+        A long listing of a single file. The date and time just before its
+        name say when it was last changed.
+      result: |
+        Last changed on 22 August at 02:31: half past two at night. I add
+        accounts in the daytime, and the last one I added was yours, on the
+        morning of the 18th. Somebody changed the list of accounts four days
+        later, in the middle of the night.
       # The file's own listing line is on screen, however it was asked for.
       done: { output_matches: "Aug 22 02:31.*passwd" }
 
@@ -116,10 +125,13 @@ beats:
       goal: The computer keeps a record of every login. Ask for this account's.
       run: last pike
       explain: |
-        `last` lists logins, newest first: the account, the terminal, where
-        the connection came from, when it started and ended, and how long it
-        lasted. `ttyn1` is our one line to the outside world. `shale` is the
-        gateway that line runs through.
+        `last` reads the computer's login records and lists them, newest
+        first. Give it an account name and it lists only that account's.
+      result: |
+        One login per line. The columns are: account, terminal, where the
+        connection came from, the day and time it started, when it ended,
+        and in brackets how long it lasted. `ttyn1` is our one line to the
+        outside world, and `shale` is the gateway that line runs through.
       done: { command_ran: last, output_matches: "pike\\s+ttyn1" }
 
   - say:
@@ -136,8 +148,12 @@ beats:
       goal: Give `last` the name of the terminal instead of an account.
       run: last ttyn1
       explain: |
-        The same list, for everyone who has logged in on the network line.
-        There are two names in it.
+        Give `last` the name of a terminal instead of an account, and it
+        lists everyone who has logged in on that terminal.
+      result: |
+        Two names. `pike`, and one more: `hollis`. Look at the dates: `hollis`
+        came in first, on 21 and 22 August, before `pike` existed. The top
+        line is `hollis` again, on 1 September.
       done: { command_ran: last, output_matches: "hollis\\s+ttyn1" }
 
   - deliver: { item: hollis-note }
@@ -156,9 +172,13 @@ beats:
       goal: See what the computer knows about him.
       run: finger hollis
       explain: |
-        `finger` shows an account's real name, its last login, and the note
-        its owner left in a file called `.plan`. He wrote that note before he
-        left, a year ago. The last login is yesterday.
+        `finger` shows what the computer knows about an account: the real
+        name, home directory, last login, and a note the owner left in a
+        file called `.plan`.
+      result: |
+        The note under `Plan:` says he is overseas until summer 1987. He wrote
+        it before he left, a year ago. But the last login is Monday 1
+        September, yesterday, at 02:47, on the network line.
       done: { command_ran: finger, output_matches: "hollis" }
 
   - say:
@@ -183,11 +203,14 @@ beats:
       goal: One more file. Look again at the usage log you counted this morning.
       run: ls -l /usr/adm/usage.log
       explain: |
-        Read the first column as three groups after the leading dash. `rw-`
-        is for the owner: read and write. `r--` is for the group and `r--`
-        for everyone else: read only. The owner is `root`. And it was last
-        changed at 03:02 on 1 September, a holiday, when one person was
-        logged in.
+        A long listing again. This time look at the first column, the
+        permissions, as well as the owner and the time.
+      result: |
+        Read the first column as three groups of three after the leading dash.
+        `rw-` is for the owner: read and write. `r--` is for the group, and
+        `r--` for everyone else: read only. The owner is `root`, so only
+        `root` may change this file. It was last changed at 03:02 on 1
+        September, a holiday, during that last `hollis` login.
       done: { output_matches: "Sep\\s+1 03:02.*usage\\.log" }
 
   - prompt:
@@ -195,8 +218,10 @@ beats:
       goal: Changed how? Look for his sessions in it.
       run: grep hollis /usr/adm/usage.log
       explain: |
-        Nothing. The login records show three sessions for `hollis`, and the
-        usage log has no line for any of them. Somebody took them out.
+        `grep` again, searching the usage log for the name `hollis`.
+      result: |
+        No output: not one line. The login records show three sessions for
+        `hollis`, and the usage log has none of them. Somebody took them out.
       # grep reports failure when no line matches, which is the point here.
       done: { command_ran: grep, failed: true, read: /usr/adm/usage.log }
 
@@ -230,14 +255,18 @@ beats:
       goal: Pull the calls to our network line out of the gateway's log.
       run: grep ttyn1 /usr/adm/gateway.log
       explain: |
-        Each line is one call: when it started by the gateway's clock, which
-        way it went, which of our lines it used, who was at the far end, and
-        how long it lasted. `IN` is a call from outside. MeridiaNet is the
+        `grep` keeps only the lines that mention our network line, `ttyn1`.
+      result: |
+        Each line is one call: the date and time it started by the gateway's
+        clock, `IN` for a call from outside, which of our lines it used, who
+        was at the far end, and how long it lasted. MeridiaNet is the
         commercial network the lab rents its line from, and the digits after
-        it are the caller's address on it.
+        it are the caller's address on it. Six calls, all from the same
+        address.
 
-        Take six minutes off each time and compare with the logins above:
-        02:20 on 21 August becomes 02:14, the minute `hollis` logged in.
+        Take six minutes off each time and they match the logins: 02:20 on 21
+        August by the gateway's clock is 02:14 on `granite`, the minute
+        `hollis` logged in.
       done: { read: /usr/adm/gateway.log, output_matches: "granite ttyn1" }
 
   # ---- the timeline ----
@@ -246,31 +275,41 @@ beats:
       entry: dormant
       who: Marge
       text: |
-        Six calls, six logins, one caller. Now put it in order, in your
-        logbook, all on `granite` time. Start with the first time the
-        network line was used.
+        Six calls, six logins, one caller. Now put it in order in your
+        logbook, all on `granite` time. Every time you need is already on
+        the screen below; scroll up to find it.
+
+        Start with the first time the network line was used: the bottom line
+        of what `last ttyn1` printed.
 
   - log:
       entry: created
       who: Marge
-      text: Next, the password file.
+      text: |
+        Next, the password file: the time in its long listing, from
+        `ls -l /etc/passwd`.
 
   - log:
       entry: first-use
       who: Marge
-      text: Then the new account's first login. You found that one this morning.
+      text: |
+        Then the new account's first login: the bottom line of what
+        `last pike` printed.
 
   - log:
       entry: gateway
       who: Marge
       text: |
-        Now the most recent call. Find it in the gateway's log, take off the
-        six minutes, and check it against the login records.
+        Now the most recent call: the last line the gateway's log printed.
+        Write down its time as printed, then take off the six minutes to get
+        `granite` time.
 
   - log:
       entry: edit
       who: Marge
-      text: And what happened during that last session.
+      text: |
+        And what happened during that last session: the long listing of the
+        usage log, from `ls -l /usr/adm/usage.log`.
 
   - log:
       entry: suspects
@@ -321,11 +360,13 @@ logbook:
     blanks:
       time:
         matches: "^0?2[:.]?14( ?a\\.?m\\.?)?$"
-        hint: Look at the oldest line that last printed for the network line. Use the time on granite, not the gateway's.
+        label: time, like 14:30
+        hint: The bottom line of what `last ttyn1` printed, the time after the date. Use the time on granite, not the gateway's.
         width: 7
       account:
         accept: [hollis]
-        hint: Read the first column of that line.
+        label: account name
+        hint: The first word on that same line.
         width: 10
 
   - id: created
@@ -333,7 +374,8 @@ logbook:
     blanks:
       time:
         matches: "^0?2[:.]?31( ?a\\.?m\\.?)?$"
-        hint: Look at the long listing of the password file.
+        label: time, like 14:30
+        hint: The time just before the name in the long listing from `ls -l /etc/passwd`.
         width: 7
 
   - id: first-use
@@ -341,11 +383,13 @@ logbook:
     blanks:
       day:
         number: { value: 24 }
-        hint: Look at the oldest of the three logins for this account.
+        label: day, like 9
+        hint: The bottom line of what `last pike` printed. Just the number of the day.
         width: 4
       time:
         matches: "^0?3[:.]?05( ?a\\.?m\\.?)?$"
-        hint: Look at the oldest of the three logins for this account.
+        label: time, like 14:30
+        hint: The same line, the time the login started (the first of the two times).
         width: 7
 
   - id: gateway
@@ -353,11 +397,13 @@ logbook:
     blanks:
       gateway:
         matches: "^0?2[:.]?53( ?a\\.?m\\.?)?$"
-        hint: Read the last line of the gateway's log.
+        label: gateway time
+        hint: The last line of what `grep ttyn1 /usr/adm/gateway.log` printed. Copy the time as it is.
         width: 7
       corrected:
         matches: "^0?2[:.]?47( ?a\\.?m\\.?)?$"
-        hint: The gateway's clock is six minutes fast, so take six minutes off.
+        label: granite time
+        hint: The gateway's clock is six minutes fast, so take six minutes off the gateway time.
         width: 7
 
   - id: edit
@@ -365,11 +411,13 @@ logbook:
     blanks:
       time:
         matches: "^0?3[:.]?02( ?a\\.?m\\.?)?$"
-        hint: Look at the long listing of the usage log.
+        label: time, like 14:30
+        hint: The time just before the name in the long listing from `ls -l /usr/adm/usage.log`.
         width: 7
       owner:
         accept: [root]
-        hint: The long listing names the owner, and only the owner has a w.
+        label: account name
+        hint: In that same listing, the owner is the name right after the 1. The owner is the only one with a w.
         width: 8
 
   - id: suspects

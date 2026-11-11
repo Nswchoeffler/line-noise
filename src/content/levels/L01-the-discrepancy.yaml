@@ -6,6 +6,10 @@
 #
 # Every prompt is checked by what it achieved (a file read, a file written,
 # something shown on screen), never by the text of the command.
+#
+# Each prompt has two explanations: `explain` says what the command does and
+# is shown before it is typed; `result` says what its output means and is
+# shown once it has run, above the next step.
 
 id: L01-the-discrepancy
 number: 1
@@ -33,7 +37,9 @@ beats:
         command, press Enter, and the computer answers. That is all there is
         to it.
 
-        I will give you each command and tell you what it means. Type it
+        Each time, I will give you the command and tell you what it does.
+        Once it has run, I will tell you what the answer means, up here at
+        the top, while it is still on the screen below. Type each command
         yourself rather than copying it: fingers learn faster than eyes. You
         cannot break anything by looking.
 
@@ -45,9 +51,11 @@ beats:
       run: pwd
       explain: |
         `pwd` stands for "print working directory". A directory is what you
-        may know as a folder. The answer is a path: directories separated by
-        slashes, read from left to right. You start in your own home
-        directory.
+        may know as a folder. The computer always has you standing in one.
+      result: |
+        `/home/ops` is a path: a list of directories separated by slashes,
+        read from the top. You are in `ops`, which is inside `home`. This is
+        your home directory, where every session starts.
 
   - prompt:
       who: Marge
@@ -55,8 +63,11 @@ beats:
       run: cd /usr/local/billing
       explain: |
         `cd` stands for "change directory", and the path after it says where
-        to go. Nothing is printed when it works. The line under the terminal
-        always shows who and where you are.
+        to go.
+      result: |
+        Nothing was printed, and that means it worked. Commands that succeed
+        often say nothing at all. The line under the terminal always shows
+        who and where you are: it now ends in `/usr/local/billing`.
       done: { cwd: /usr/local/billing }
 
   - prompt:
@@ -65,9 +76,13 @@ beats:
       run: ls -l
       explain: |
         `ls` lists the files in a directory. The `-l` is an option, which
-        changes how a command behaves: this one asks for the long form, one
-        file per line, with its owner, its size and when it was last changed.
-        Options start with a dash.
+        changes how a command behaves: this one asks for the long form, with
+        details about each file. Options start with a dash.
+      result: |
+        Three things are here: `ledger`, `reconcile.aug` and `requests`. The
+        name is at the end of each line. Before it come the owner, the size,
+        and when it was last changed. A `d` at the very start of a line means
+        a directory, so `requests` is a directory and the other two are files.
       done: { command_ran: ls, touched: /usr/local/billing }
 
   # ---- two sets of books ----
@@ -77,8 +92,12 @@ beats:
       goal: Start with the report that is doing the complaining.
       run: cat reconcile.aug
       explain: |
-        `cat` prints a file on the screen. Because you are already in the
-        directory that holds `reconcile.aug`, its name alone is enough.
+        `cat` prints a file on the screen. You are already in the directory
+        that holds `reconcile.aug`, so its name alone is enough.
+      result: |
+        This is the month-end report. It compares two totals of minutes, and
+        the line marked `Difference` is the gap between them: 23 minutes,
+        worth $1.15.
       done: { read: /usr/local/billing/reconcile.aug }
 
   - say:
@@ -97,10 +116,11 @@ beats:
         The first set of books is the ledger. The front office keeps it: one
         line for each account they have approved.
       run: cat ledger
-      explain: |
-        Each line is an account name, the minutes billed, the charge in
-        dollars, and the department that pays. Count the lines: nine
-        accounts.
+      explain: The same command as before, on another file.
+      result: |
+        Each line is one account: its name, the minutes billed, the charge in
+        dollars, and the department that pays. There are nine lines, so nine
+        accounts were billed.
       done: { read: /usr/local/billing/ledger }
 
   - prompt:
@@ -113,8 +133,12 @@ beats:
       explain: |
         `head` prints the first ten lines of a file. This time you gave the
         whole path, starting from the top with a slash, because the file is
-        in a different directory. The columns are: account, terminal, date,
-        start time, and seconds connected.
+        in a different directory from the one you are in.
+      result: |
+        Each line is one session on the computer. The columns are: account,
+        terminal, date, start time, and seconds connected. So the first line
+        says `lfaber` sat at terminal `ttyh6` on 1 August from 08:03, for
+        4380 seconds, which is 73 minutes.
       done: { read: /usr/adm/usage.log }
 
   - prompt:
@@ -122,9 +146,10 @@ beats:
       goal: How long is it?
       run: wc -l /usr/adm/usage.log
       explain: |
-        `wc` counts things, and `-l` asks it to count lines. One line per
-        session makes 181 sessions in August. Too many to tally by eye, so
-        let the computer do the counting.
+        `wc` counts things, and `-l` asks it to count lines.
+      result: |
+        181 lines, and one line per session, so 181 sessions in August. Too
+        many to tally by eye. Next, let the computer do the counting.
 
   # ---- counting ----
 
@@ -135,19 +160,26 @@ beats:
         out and look at the top of the result.
       run: cut -f1 /usr/adm/usage.log | head
       explain: |
-        `cut -f1` keeps the first field of every line and drops the rest. The
-        upright bar `|` is a pipe: it sends what one command prints into the
-        next command instead of onto the screen. Here `cut` feeds `head`.
+        `cut -f1` keeps the first column of every line and drops the rest.
+        The upright bar `|` is a pipe: it sends what one command prints into
+        the next command instead of onto the screen. Here `cut` feeds `head`,
+        so you see only the first ten.
+      result: |
+        Just the names now, one per session. The same name turns up again and
+        again, once for each of its sessions.
 
   - prompt:
       who: Marge
       goal: Now count how many sessions each account had.
       run: cut -f1 /usr/adm/usage.log | sort | uniq -c
       explain: |
-        Three small tools in a row. `sort` puts the names in order, so that
-        equal names sit together. `uniq -c` squeezes each run of equal lines
-        into one and counts how many there were. The number in front of each
-        name is its number of sessions.
+        Three small tools in a row. `sort` puts the names in order, so equal
+        names sit together. `uniq -c` squeezes each run of equal names into
+        one line and counts how many there were.
+      result: |
+        One line per account. The number in front is how many sessions that
+        account had in August: `marge` had 42, `pike` had 3. Count the lines:
+        nine accounts used the computer.
       done: { command_ran: uniq, output_matches: "\\b3 pike$" }
 
   - say:
@@ -169,8 +201,10 @@ beats:
       explain: |
         The same pipeline without the count, and with one new piece: `>`
         sends the result into a file instead of onto the screen. `/tmp` is a
-        scratch directory that anyone may write in. Nothing is printed. On
-        this system, silence means it worked.
+        scratch directory that anyone may write in.
+      result: |
+        Nothing was printed, because the list went into the file `/tmp/used`
+        instead. On this system, silence means it worked.
       # Any way of getting the account names into the file, one per line.
       done: { file_contains: { path: /tmp/used, matches: "^pike$" } }
 
@@ -182,6 +216,9 @@ beats:
         The ledger already has one line per account, so there is nothing to
         squeeze. Sorting both lists the same way is what makes them
         comparable.
+      result: |
+        Silence again. You now have two sorted lists of account names in
+        `/tmp`: who used the computer, and who was billed.
       done: { file_contains: { path: /tmp/billed, matches: "^hollis$" } }
 
   - prompt:
@@ -189,9 +226,14 @@ beats:
       goal: Compare the two lists.
       run: diff /tmp/billed /tmp/used
       explain: |
-        `diff` prints only the lines that differ. A line that starts with `<`
-        is in the first file only. A line that starts with `>` is in the
-        second file only. Whatever is in both is left out.
+        `diff` compares two files line by line and prints only the lines
+        that differ.
+      result: |
+        `< hollis` means `hollis` is only in the first file: billed, but used
+        nothing. `> pike` means `pike` is only in the second file: used the
+        computer, but never billed. The lines like `2d1` and `7a7` only say
+        where in the files the differences are, and you can ignore them.
+        Every name the two files share is left out.
       done: { output_matches: "^> pike$" }
 
   - say:
@@ -211,9 +253,11 @@ beats:
       goal: Pull every line for `pike` out of the usage log.
       run: grep pike /usr/adm/usage.log
       explain: |
-        `grep` prints the lines that contain a word, and nothing else. Three
-        sessions. Remember the columns: account, terminal, date, start time,
-        seconds connected.
+        `grep` searches a file and prints only the lines that contain a word.
+      result: |
+        Three sessions, all on terminal `ttyn1`, all in the small hours. The
+        columns are the same as before: account, terminal, date, start time,
+        and seconds connected. The seconds are 420, 540 and 420.
       # The account's own lines are on screen, with or without line numbers.
       done: { read: /usr/adm/usage.log, output_matches: "\\bpike\\s+ttyn1\\s+Aug 24\\b" }
 
@@ -221,9 +265,10 @@ beats:
       who: Marge
       goal: And make sure the ledger really has nothing.
       run: grep pike ledger
-      explain: |
-        When `grep` finds nothing, it prints nothing. An empty answer is
-        still an answer: there is no `pike` in the ledger.
+      explain: The same search, in the ledger.
+      result: |
+        No output at all. When `grep` finds nothing, it prints nothing, and
+        that is the answer: there is no `pike` in the ledger.
       # grep reports failure when no line matches, which is the point here.
       done: { command_ran: grep, failed: true, read: /usr/local/billing/ledger }
 
@@ -234,18 +279,22 @@ beats:
         That is a finding. Write it in your logbook, on the right. A finding
         you have not written down is one you will be arguing about next week.
 
+        The small grey words under each blank say what goes in it.
+
   - log:
       entry: time
       who: Marge
       text: |
-        Now the amount. Add up the last column of the three `pike` lines:
-        that is seconds. Divide by 60 for minutes, then multiply by five
-        cents.
+        Now the amount. The three `pike` lines are still on the screen below.
+        Their last column is seconds: add them up and divide by 60 for
+        minutes. Then multiply the minutes by 0.05 for dollars.
 
   - log:
       entry: first
       who: Marge
-      text: When did it start? Look at the earliest of the three lines.
+      text: |
+        When did it start? Look at the earliest of the three `pike` lines:
+        the date is the third column and the start time the fourth.
 
   - log:
       entry: evidence
@@ -295,7 +344,8 @@ logbook:
     blanks:
       account:
         accept: [pike]
-        hint: Look for the line that diff marked with a > sign.
+        label: account name
+        hint: It is the name diff marked with a > sign.
         width: 10
 
   - id: time
@@ -303,15 +353,18 @@ logbook:
     blanks:
       sessions:
         number: { value: 3 }
+        label: how many sessions
         hint: Count the lines grep printed for this account.
         width: 4
       minutes:
         number: { value: 23 }
-        hint: Add the last column of the three lines, then divide by 60 to turn seconds into minutes.
+        label: total minutes
+        hint: Add up the last column of those lines (seconds), then divide by 60.
         width: 5
       amount:
         number: { value: 1.15 }
-        hint: Multiply the minutes by 0.05.
+        label: dollars, like 2.50
+        hint: Multiply the total minutes by 0.05.
         width: 6
 
   - id: first
@@ -319,11 +372,13 @@ logbook:
     blanks:
       day:
         number: { value: 24 }
-        hint: The third column of the usage log is the date.
+        label: day, like 9
+        hint: In the earliest line for this account, the date is the third column. Just the number.
         width: 4
       time:
         matches: "^0?3[:.]?05( ?a\\.?m\\.?)?$"
-        hint: The fourth column is the start time, on a 24-hour clock.
+        label: time, like 14:30
+        hint: In the same line, the start time is the fourth column. Copy it as it is printed.
         width: 7
 
   - id: evidence

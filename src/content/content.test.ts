@@ -154,6 +154,30 @@ describe('the world', () => {
   })
 })
 
+describe('every guided level', () => {
+  it('explains both what each command does and what its output means', () => {
+    for (const { level } of game.levels.filter((l) => l.level.mode === 'guided')) {
+      for (const beat of level.beats) {
+        if (!('prompt' in beat)) continue
+        expect(beat.prompt.explain.trim(), `${level.id}: ${beat.prompt.run}`).not.toBe('')
+        expect(beat.prompt.result?.trim() ?? '', `${level.id}: ${beat.prompt.run} has no result`).not.toBe('')
+      }
+    }
+  })
+
+  it('says under every blank what goes in it, and where to look for it', () => {
+    for (const { level } of game.levels.filter((l) => l.level.mode === 'guided')) {
+      for (const entry of level.logbook) {
+        if (!('fill' in entry)) continue
+        for (const [name, blank] of Object.entries(entry.blanks)) {
+          expect(blank.label, `${level.id} ${entry.id}.${name} label`).toBeTruthy()
+          expect(blank.hint, `${level.id} ${entry.id}.${name} hint`).toBeTruthy()
+        }
+      }
+    }
+  })
+})
+
 describe('Level 1: The Discrepancy', () => {
   /** The route Marge suggests, one line per prompt. */
   const SUGGESTED = [

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import type { Answer, Grade } from '../engine/levels/logbook.ts'
 import type { LevelState, LogbookEntryState } from '../engine/levels/runner.ts'
 import type { LogbookEntry } from '../engine/levels/schema.ts'
+import { InlineText } from './RichText.tsx'
 
 export interface LogbookProps {
   level: LevelState
@@ -32,7 +33,7 @@ function Feedback({ grade }: { grade: Grade | null }) {
   if (!grade || grade.correct) return null
   return (
     <p className="entry-feedback" role="status">
-      Not right yet. {grade.hint ?? 'Look again and try once more.'}
+      Not right yet. <InlineText text={grade.hint ?? 'Look again and try once more.'} />
     </p>
   )
 }
@@ -47,10 +48,19 @@ function FillEntry({ state, onAnswer }: EntryProps<'fill'>) {
   const parts = entry.fill.split(/(\{[a-z0-9_]+\})/)
   const blankNames = [...entry.fill.matchAll(/\{([a-z0-9_]+)\}/g)].map((m) => m[1]!)
 
+  const [showHelp, setShowHelp] = useState(false)
+
   function submit(event: FormEvent): void {
     event.preventDefault()
     onAnswer({ kind: 'fill', values })
   }
+
+  /** What to call a blank when talking about it: its label, or its number. */
+  const nameOf = (name: string): string => entry.blanks[name]?.label ?? `Blank ${blankNames.indexOf(name) + 1}`
+  const withHints = blankNames.filter((name) => entry.blanks[name]?.hint !== undefined)
+
+  // After a check: every blank that is not right yet, with where to look for it.
+  const wrong = grade && !grade.correct ? blankNames.filter((name) => grade.blanks?.[name] !== true) : []
 
   return (
     <form onSubmit={submit}>
@@ -66,16 +76,23 @@ function FillEntry({ state, onAnswer }: EntryProps<'fill'>) {
           const ok = grade?.blanks?.[name] === true
           return (
             <span key={i} className="entry-blank">
-              <input
-                type="text"
-                value={values[name] ?? ''}
-                size={blank.width}
-                onChange={(e) => setValues({ ...values, [name]: e.target.value })}
-                aria-label={`Blank ${blankNumber}`}
-                aria-invalid={marked && !ok ? true : undefined}
-                autoComplete="off"
-                spellCheck={false}
-              />
+              <span className="entry-blank-box">
+                <input
+                  type="text"
+                  value={values[name] ?? ''}
+                  size={blank.width}
+                  onChange={(e) => setValues({ ...values, [name]: e.target.value })}
+                  aria-label={blank.label === undefined ? `Blank ${blankNumber}` : `Blank ${blankNumber}: ${blank.label}`}
+                  aria-invalid={marked && !ok ? true : undefined}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+                {blank.label !== undefined && (
+                  <span className="entry-blank-label" aria-hidden="true">
+                    {blank.label}
+                  </span>
+                )}
+              </span>
               {marked && (values[name] ?? '').trim() !== '' && <Mark ok={ok} />}
             </span>
           )
@@ -83,10 +100,45 @@ function FillEntry({ state, onAnswer }: EntryProps<'fill'>) {
       </p>
       {!complete && (
         <>
-          <button type="submit" className="button">
-            Check
-          </button>
-          <Feedback grade={grade} />
+          <div className="entry-actions">
+            <button type="submit" className="button">
+              Check
+            </button>
+            {withHints.length > 0 && (
+              <button
+                type="button"
+                className="button button-quiet"
+                aria-expanded={showHelp}
+                onClick={() => setShowHelp(!showHelp)}
+              >
+                {showHelp ? 'Hide where to look' : 'Where do I look?'}
+              </button>
+            )}
+          </div>
+          {showHelp && (
+            <ul className="entry-help">
+              {withHints.map((name) => (
+                <li key={name}>
+                  <strong>{nameOf(name)}:</strong> <InlineText text={entry.blanks[name]!.hint!} />
+                </li>
+              ))}
+            </ul>
+          )}
+          {wrong.length > 0 && (
+            <div className="entry-feedback" role="status">
+              <p>Not right yet. Hints are free, and a wrong answer costs nothing.</p>
+              <ul>
+                {wrong.map((name) => (
+                  <li key={name}>
+                    <strong>{nameOf(name)}:</strong>{' '}
+                    {(saved[name] ?? '').trim() === ''
+                      ? 'still empty.'
+                      : <InlineText text={entry.blanks[name]!.hint ?? 'look again and try once more.'} />}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </>
       )}
     </form>

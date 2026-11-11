@@ -1,19 +1,60 @@
+import { useEffect, useRef } from 'react'
 import type { LevelState } from '../engine/levels/runner.ts'
+import type { Beat } from '../engine/levels/schema.ts'
 import { RichText } from './RichText.tsx'
 
 export interface GuidanceProps {
   level: LevelState
+  /** Every beat of the level, so the last finished step can be recalled. */
+  beats: readonly Beat[]
   onContinue: () => void
   onOpenLogbook: () => void
 }
 
+/** The most recent command step the player has finished, if it explains its output. */
+function lastResult(beats: readonly Beat[], beatIndex: number): { run: string; result: string } | null {
+  for (let i = Math.min(beatIndex, beats.length) - 1; i >= 0; i--) {
+    const beat = beats[i]!
+    if ('prompt' in beat) {
+      return beat.prompt.result === undefined ? null : { run: beat.prompt.run, result: beat.prompt.result }
+    }
+  }
+  return null
+}
+
+/**
+ * What the output of the last command means. It stays at the top of the
+ * guidance until the next command is done, so the player can read it while
+ * the output is still on the screen below.
+ */
+function Recap({ run, result }: { run: string; result: string }) {
+  return (
+    <section className="guidance-recap" aria-label="What your last command showed">
+      <p className="guidance-label">You ran:</p>
+      <pre className="guidance-recap-command">
+        <code>{run}</code>
+      </pre>
+      <p className="guidance-label">What the output means:</p>
+      <RichText text={result} />
+    </section>
+  )
+}
+
 /**
  * The mentor's voice, just above the terminal. In a guided level it shows the
- * current beat: something said, a command to type with what it means, a
- * logbook entry to fill in, or a wait.
+ * current beat: something said, a command to type with what it does, a
+ * logbook entry to fill in, or a wait. Above it, what the last command's
+ * output means.
  */
-export function Guidance({ level, onContinue, onOpenLogbook }: GuidanceProps) {
+export function Guidance({ level, beats, onContinue, onOpenLogbook }: GuidanceProps) {
   const beat = level.beat
+  const recap = lastResult(beats, level.beatIndex)
+
+  // Each new step starts at the top, never part-way down the last one.
+  const box = useRef<HTMLElement>(null)
+  useEffect(() => {
+    box.current?.scrollTo?.({ top: 0 })
+  }, [level.beatIndex])
 
   let body
   if (!beat) {
@@ -71,6 +112,7 @@ export function Guidance({ level, onContinue, onOpenLogbook }: GuidanceProps) {
         <pre className="guidance-command" aria-labelledby="guidance-command-label">
           <code>{beat.prompt.run}</code>
         </pre>
+        <p className="guidance-label">What it does:</p>
         <RichText text={beat.prompt.explain} />
         {level.attempts >= 2 && (
           <p className="guidance-nudge" role="status">
@@ -93,8 +135,14 @@ export function Guidance({ level, onContinue, onOpenLogbook }: GuidanceProps) {
   }
 
   return (
-    <section className="guidance" aria-label="Guidance" aria-live="polite">
-      {body}
+    <section
+      ref={box}
+      className={recap ? 'guidance guidance-has-recap' : 'guidance'}
+      aria-label="Guidance"
+      aria-live="polite"
+    >
+      {recap && <Recap run={recap.run} result={recap.result} />}
+      <div className="guidance-now">{body}</div>
     </section>
   )
 }

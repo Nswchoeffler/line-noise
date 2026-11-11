@@ -10,6 +10,11 @@ function inline(text: string): ReactNode[] {
     )
 }
 
+/** A short piece of story text within a line: `backticks` become code, nothing else changes. */
+export function InlineText({ text }: { text: string }) {
+  return <>{inline(text)}</>
+}
+
 /**
  * Story text as written in level files: blank lines separate paragraphs,
  * single line breaks are only wrapping, and `backticks` mark something to

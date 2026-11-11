@@ -69,6 +69,14 @@ function LevelNotes({ loaded, level }: { loaded: LoadedLevel; level: LevelState 
                   <code>{beat.prompt.run}</code>
                 </pre>
                 <RichText text={beat.prompt.explain} />
+                {beat.prompt.result !== undefined && (
+                  <>
+                    <p>
+                      <strong>What the output meant:</strong>
+                    </p>
+                    <RichText text={beat.prompt.result} />
+                  </>
+                )}
               </li>
             )
           }

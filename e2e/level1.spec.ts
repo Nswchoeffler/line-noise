@@ -39,7 +39,16 @@ test('Level 1 can be played from briefing to debrief with the keyboard alone', a
   // Finding your way.
   await type(page, 'pwd')
   await expect(output(page)).toContainText('/home/ops')
+
+  // What the output meant stays at the top, above the next step and what it does.
+  const recap = page.getByRole('region', { name: 'What your last command showed' })
+  await expect(recap).toContainText('pwd')
+  await expect(recap).toContainText('You are in ops, which is inside home.')
+  await expect(guidance(page)).toContainText('What it does:')
+  await expect(guidance(page).locator('.guidance-command')).toHaveText('cd /usr/local/billing')
+
   await type(page, 'cd /usr/local/billing')
+  await expect(recap).toContainText('Nothing was printed, and that means it worked.')
   await expect(page.getByText('ops@granite:/usr/local/billing')).toBeVisible()
   await type(page, 'ls -l')
   await expect(output(page)).toContainText('reconcile.aug')
@@ -87,11 +96,20 @@ test('Level 1 can be played from briefing to debrief with the keyboard alone', a
   await page.keyboard.press('Tab')
   await page.keyboard.type('1.15')
   await page.keyboard.press('Enter')
-  await expect(panel(page)).toContainText('Not right yet. Add the last column of the three lines')
+  // Only the wrong blank is pointed out, by what goes in it, with where to look.
+  const feedback = page.locator('#entry-time .entry-feedback')
+  await expect(feedback).toContainText('Not right yet.')
+  await expect(feedback).toContainText('total minutes: Add up the last column of those lines (seconds), then divide by 60.')
+  await expect(feedback).not.toContainText('how many sessions')
+  await expect(page.locator('#entry-time')).toContainText('dollars, like 2.50')
   await page.locator('#entry-time').getByRole('textbox', { name: 'Blank 2' }).fill('23')
   await page.keyboard.press('Enter')
 
   await expect(guidance(page)).toContainText('When did it start?')
+  // Where to look, before guessing: free, and it gives nothing away.
+  await page.locator('#entry-first').getByRole('button', { name: 'Where do I look?' }).click()
+  await expect(page.locator('#entry-first .entry-help')).toContainText('the date is the third column')
+  await page.locator('#entry-first').getByRole('textbox', { name: 'Blank 1' }).focus()
   await expect(page.locator('#entry-first').getByRole('textbox', { name: 'Blank 1' })).toBeFocused()
   await page.keyboard.type('24')
   await page.keyboard.press('Tab')

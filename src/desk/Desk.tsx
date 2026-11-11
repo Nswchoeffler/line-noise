@@ -127,7 +127,12 @@ function LevelDesk({ game, gameState }: { game: Game; gameState: GameState }) {
   return (
     <div className="desk-play" onKeyDown={onDeskKeyDown}>
       <div className="desk-left">
-        <Guidance level={level} onContinue={() => session.continue()} onOpenLogbook={() => showTab('logbook', true)} />
+        <Guidance
+          level={level}
+          beats={loaded.level.beats}
+          onContinue={() => session.continue()}
+          onOpenLogbook={() => showTab('logbook', true)}
+        />
         <div className="desk-terminal">
           <Terminal
             model={terminal}
