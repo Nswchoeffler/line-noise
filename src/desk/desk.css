@@ -1,5 +1,19 @@
 :root {
   color-scheme: dark;
+  --desk: #1d1913;
+  --desk-edge: #3a3226;
+  --desk-text: #e8dfc8;
+  --desk-dim: #b5a98c;
+  --paper: #f3ecd8;
+  --paper-edge: #cfc4a4;
+  --ink: #2b2519;
+  --ink-dim: #5c5340;
+  --link: #1c4a86;
+  --accent: #f2c14e;
+  --good: #1f6b3a;
+  --bad: #9b2c1f;
+  --mono: ui-monospace, 'Cascadia Mono', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+
   font-family: system-ui, 'Segoe UI', Helvetica, Arial, sans-serif;
   font-size: 16px;
   line-height: 1.5;
@@ -17,27 +31,718 @@ body,
 
 body {
   margin: 0;
-  background: #14110d;
-  color: #e8dfc8;
+  background: var(--desk);
+  color: var(--desk-text);
 }
+
+code,
+pre {
+  font-family: var(--mono);
+}
+
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Paper surfaces are light, so their form controls should be too. */
+.guidance,
+.panel,
+.screen {
+  color-scheme: light;
+}
+
+/* ---- overall layout ------------------------------------------------------ */
 
 .desk {
   display: flex;
   flex-direction: column;
   height: 100%;
-  max-width: 72rem;
+  max-width: 96rem;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 0.75rem 1rem 1rem;
   gap: 0.75rem;
 }
 
-.desk h1 {
+.desk-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.desk-header h1 {
   margin: 0;
-  font-size: 1.25rem;
-  letter-spacing: 0.04em;
+  font-size: 1.15rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.desk-level {
+  margin: 0;
+  color: var(--desk-dim);
+}
+
+.desk-play {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(22rem, 2fr);
+  gap: 1rem;
+}
+
+.desk-left,
+.desk-right {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 0.5rem;
 }
 
 .desk-terminal {
   flex: 1;
+  min-height: 12rem;
+}
+
+.status-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--desk-dim);
+}
+
+/* ---- buttons and links ----------------------------------------------------- */
+
+.button {
+  font: inherit;
+  font-weight: 600;
+  padding: 0.35rem 0.9rem;
+  border: 2px solid var(--ink);
+  border-radius: 4px;
+  background: var(--ink);
+  color: var(--paper);
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  background: #453c2a;
+}
+
+.button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.button-quiet {
+  background: transparent;
+  color: var(--ink);
+}
+
+.button-quiet:hover:not(:disabled) {
+  background: rgb(43 37 25 / 10%);
+}
+
+.button-large {
+  font-size: 1.1rem;
+  padding: 0.6rem 1.6rem;
+}
+
+.link-button {
+  font: inherit;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--link);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+a {
+  color: var(--link);
+}
+
+/* ---- guidance -------------------------------------------------------------- */
+
+.guidance {
+  flex: none;
+  max-height: 45%;
+  overflow-y: auto;
+  padding: 0.75rem 1rem;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--paper-edge);
+  border-left: 6px solid var(--accent);
+  border-radius: 6px;
+}
+
+.guidance p,
+.guidance ul {
+  margin: 0 0 0.6rem;
+}
+
+.guidance > :last-child {
+  margin-bottom: 0;
+}
+
+.guidance-heading {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.guidance-label {
+  font-weight: 600;
+}
+
+.guidance-command {
+  margin: 0 0 0.6rem;
+  padding: 0.5rem 0.75rem;
+  background: #0d0f0c;
+  color: #d8e8c8;
+  border-radius: 4px;
+  font-size: 1.05rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.guidance code,
+.panel code,
+.screen code {
+  padding: 0.05em 0.3em;
+  background: rgb(43 37 25 / 12%);
+  border-radius: 3px;
+  font-size: 0.95em;
+}
+
+.guidance-command code {
+  padding: 0;
+  background: none;
+  font-size: 1em;
+}
+
+.guidance-nudge {
+  padding: 0.4rem 0.6rem;
+  border: 1px dashed var(--ink-dim);
+  border-radius: 4px;
+}
+
+/* ---- tabs and panel ---------------------------------------------------------- */
+
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.tab {
+  font: inherit;
+  font-weight: 600;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--desk-edge);
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+  background: #2a241b;
+  color: var(--desk-dim);
+  cursor: pointer;
+}
+
+.tab[aria-selected='true'] {
+  background: var(--paper);
+  color: var(--ink);
+  border-color: var(--paper-edge);
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+
+.tab-badge {
+  color: var(--accent);
+}
+
+.panel {
+  flex: 1;
   min-height: 0;
+  overflow-y: auto;
+  margin-top: -0.5rem;
+  padding: 1rem;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--paper-edge);
+  border-radius: 0 6px 6px 6px;
+}
+
+.panel h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.panel h4 {
+  margin: 1rem 0 0.35rem;
+  font-size: 1rem;
+}
+
+.panel p,
+.panel ul,
+.panel ol {
+  margin: 0 0 0.6rem;
+}
+
+/* ---- logbook ------------------------------------------------------------------ */
+
+.goals {
+  list-style: none;
+  padding: 0;
+}
+
+.goal {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.15rem 0;
+}
+
+.goal-box {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.2em;
+  height: 1.2em;
+  border: 2px solid var(--ink);
+  border-radius: 3px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.goal-met {
+  color: var(--ink-dim);
+  text-decoration: line-through;
+}
+
+.goal-met .goal-box {
+  text-decoration: none;
+  color: var(--good);
+  border-color: var(--good);
+}
+
+.entries {
+  list-style: none;
+  padding: 0;
+}
+
+.entry {
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--paper-edge);
+  border-radius: 6px;
+  background: #fbf7ea;
+}
+
+.entry-complete {
+  border-left: 6px solid var(--good);
+}
+
+.entry-sentence {
+  line-height: 2.2;
+}
+
+.entry-blank {
+  white-space: nowrap;
+}
+
+.entry input[type='text'],
+.entry textarea {
+  font: inherit;
+  font-family: var(--mono);
+  padding: 0.15rem 0.4rem;
+  border: 0;
+  border-bottom: 2px solid var(--ink);
+  background: #fff;
+  color: var(--ink);
+}
+
+.entry textarea {
+  display: block;
+  width: 100%;
+  margin: 0.35rem 0 0.6rem;
+  border: 2px solid var(--ink);
+  border-radius: 4px;
+  font-family: inherit;
+}
+
+.entry input[aria-invalid='true'] {
+  border-bottom-color: var(--bad);
+  border-bottom-style: dashed;
+}
+
+.entry-filled {
+  padding: 0 0.3em;
+  font-family: var(--mono);
+  border-bottom: 2px solid var(--good);
+}
+
+.mark {
+  margin-left: 0.25rem;
+  font-weight: bold;
+}
+
+.mark-ok {
+  color: var(--good);
+}
+
+.mark-no {
+  color: var(--bad);
+}
+
+.entry-feedback {
+  margin: 0.6rem 0 0;
+  padding: 0.4rem 0.6rem;
+  border-left: 4px solid var(--bad);
+  background: #f7e6df;
+}
+
+.entry-logged {
+  margin: 0.5rem 0 0;
+  font-weight: 600;
+  color: var(--good);
+}
+
+.entry-options {
+  margin: 0 0 0.6rem;
+  padding: 0;
+  border: 0;
+}
+
+.entry-options legend {
+  padding: 0;
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+}
+
+.entry-option {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.2rem 0;
+  cursor: pointer;
+}
+
+.entry-count {
+  font-weight: normal;
+  color: var(--ink-dim);
+}
+
+.entry-evidence {
+  margin: 0 0 0.6rem;
+  padding: 0.4rem 0.6rem;
+  background: #0d0f0c;
+  color: #d8e8c8;
+  border-left: 4px solid var(--accent);
+  border-radius: 4px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+}
+
+.entry-evidence-wrong {
+  border-left-color: var(--bad);
+  border-left-style: dashed;
+}
+
+.entry-written {
+  font-style: italic;
+}
+
+.logbook-empty,
+.binder-empty,
+.tray-empty {
+  color: var(--ink-dim);
+  font-style: italic;
+}
+
+/* ---- printout tray --------------------------------------------------------- */
+
+.tray-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  list-style: none;
+  padding: 0;
+}
+
+.tray-item-button {
+  font: inherit;
+  padding: 0.25rem 0.7rem;
+  border: 1px solid var(--ink);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.tray-item-button[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.paper {
+  border: 1px solid var(--paper-edge);
+  border-radius: 2px;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 25%);
+}
+
+.paper-title {
+  margin: 0 !important;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px dashed var(--paper-edge);
+}
+
+.paper-lines {
+  padding: 0.5rem 0;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.paper-line {
+  min-height: 1.5em;
+  padding: 0 0.75rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Fan-fold printer paper: alternating green bars. */
+.paper-printout {
+  background: #fdfcf6;
+}
+
+.paper-printout .paper-line:nth-child(4n + 3),
+.paper-printout .paper-line:nth-child(4n + 4) {
+  background: #e6f1e2;
+}
+
+/* A handwritten slip. */
+.paper-note {
+  background: #fff6b8;
+}
+
+.paper-note .paper-lines {
+  font-family: 'Segoe Print', 'Bradley Hand', 'Comic Sans MS', cursive;
+  font-size: 1rem;
+}
+
+.paper-line-pinned {
+  box-shadow: inset 4px 0 0 var(--accent);
+  font-weight: bold;
+}
+
+.paper-line[data-pickable] {
+  cursor: pointer;
+}
+
+.paper-line[data-pickable]:hover,
+.paper-line[data-pickable]:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: #fbe9a8;
+}
+
+/* ---- binder ------------------------------------------------------------------ */
+
+.binder-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  list-style: none;
+  padding: 0 0 0.75rem;
+  margin: 0 0 0.75rem !important;
+  border-bottom: 1px solid var(--paper-edge);
+}
+
+.binder-nav-button {
+  font: inherit;
+  padding: 0.25rem 0.7rem;
+  border: 1px solid var(--ink);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.binder-nav-button[aria-current='page'] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.notes {
+  padding-left: 1.25rem;
+}
+
+.notes li {
+  margin-bottom: 0.75rem;
+}
+
+.notes p {
+  display: inline;
+}
+
+.notes-command,
+.manual-page {
+  margin: 0.35rem 0;
+  padding: 0.5rem 0.75rem;
+  background: #0d0f0c;
+  color: #d8e8c8;
+  border-radius: 4px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+}
+
+.manual-list {
+  columns: 3;
+  list-style: none;
+  padding: 0;
+  font-family: var(--mono);
+}
+
+.level-list {
+  list-style: none;
+  padding: 0;
+}
+
+.level-list li {
+  margin-bottom: 0.4rem;
+}
+
+.level-locked {
+  color: var(--ink-dim);
+}
+
+.credits {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: var(--ink-dim);
+}
+
+/* ---- debrief cards ----------------------------------------------------------- */
+
+.card {
+  padding: 1rem 1.25rem;
+  background: #fbf7ea;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  color: var(--ink);
+}
+
+.card-stack .card {
+  margin-bottom: 1rem;
+}
+
+.card-kicker {
+  margin: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.card-title {
+  margin: 0 0 0.5rem !important;
+  font-size: 1.3rem !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  color: var(--ink) !important;
+}
+
+.card h4 {
+  margin: 0.9rem 0 0.25rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.card p {
+  margin: 0 0 0.5rem;
+}
+
+.card-source,
+.card-meta {
+  font-size: 0.9rem;
+}
+
+/* ---- briefing, debrief and end screens ----------------------------------------- */
+
+.screen {
+  flex: none;
+  align-self: center;
+  width: 100%;
+  max-width: 46rem;
+  margin: 1rem 0 2rem;
+  padding: 1.5rem 2rem 2rem;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--paper-edge);
+  border-radius: 8px;
+}
+
+.screen-kicker {
+  margin: 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.screen h2 {
+  margin: 0 0 1rem;
+  font-size: 1.8rem;
+}
+
+.screen p {
+  margin: 0 0 1rem;
+}
+
+.screen .card {
+  margin-bottom: 1rem;
+}
+
+.confirm {
+  font-weight: 600;
+}
+
+/* Narrow windows: stack the desk. A proper phone layout comes after v1.0. */
+@media (max-width: 60rem) {
+  .desk {
+    height: auto;
+    min-height: 100%;
+  }
+
+  .desk-play {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .desk-terminal {
+    height: 24rem;
+    flex: none;
+  }
+
+  .guidance {
+    max-height: none;
+  }
 }

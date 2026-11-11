@@ -83,6 +83,11 @@
   caret-color: #9ccf6a;
 }
 
+/* The terminal border shows focus; a second box around the line would be noise. */
+.terminal-input:focus-visible {
+  outline: none;
+}
+
 .pager-hint {
   flex: none;
   color: #a8b89c;

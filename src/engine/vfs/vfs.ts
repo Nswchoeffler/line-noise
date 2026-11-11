@@ -471,6 +471,12 @@ export class Vfs {
     return node ? statOf(node) : undefined
   }
 
+  /** Names in a directory, sorted, as the system itself. Undefined if it is not a directory. */
+  entries(path: string): string[] | undefined {
+    const node = this.find(path)
+    return node?.kind === 'dir' ? [...node.children.keys()].sort() : undefined
+  }
+
   /**
    * Delete a file, or a directory with everything in it, as the system
    * itself. Returns false if there was nothing there. The root cannot go.

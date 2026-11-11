@@ -11,8 +11,8 @@ import './terminal.css'
 
 export interface TerminalProps {
   model: TerminalModel
-  /** Lines already pinned as evidence, by id. They get a visible marker. */
-  pinned?: ReadonlySet<number>
+  /** Text of lines already pinned as evidence. Matching lines get a visible marker. */
+  pinned?: ReadonlySet<string>
   /**
    * True while the player is choosing a line to pin. Output lines become
    * buttons: click one, or move with the arrow keys and press Enter.
@@ -20,11 +20,20 @@ export interface TerminalProps {
   picking?: boolean
   onPick?: (line: TermLine) => void
   onCancelPick?: () => void
+  /** Escape on the command line: move focus out of the terminal. */
+  onLeave?: () => void
 }
 
-const NO_PINS: ReadonlySet<number> = new Set()
+const NO_PINS: ReadonlySet<string> = new Set()
 
-export function Terminal({ model, pinned = NO_PINS, picking = false, onPick, onCancelPick }: TerminalProps) {
+export function Terminal({
+  model,
+  pinned = NO_PINS,
+  picking = false,
+  onPick,
+  onCancelPick,
+  onLeave,
+}: TerminalProps) {
   const state = useSyncExternalStore(model.subscribe, model.getState)
   const inputRef = useRef<HTMLInputElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -43,15 +52,12 @@ export function Terminal({ model, pinned = NO_PINS, picking = false, onPick, onC
     model.cursorPlaced()
   }, [state.cursorRequest, model])
 
-  // Entering pick mode moves focus to the newest output line; leaving it
-  // returns focus to the command line.
+  // Entering pick mode moves focus to the newest output line. Where focus
+  // goes afterwards is up to whoever started the pick.
   useEffect(() => {
-    if (picking) {
-      const candidates = linesRef.current?.querySelectorAll<HTMLElement>('[data-pickable]')
-      candidates?.[candidates.length - 1]?.focus()
-    } else {
-      inputRef.current?.focus()
-    }
+    if (!picking) return
+    const candidates = linesRef.current?.querySelectorAll<HTMLElement>('[data-pickable]')
+    candidates?.[candidates.length - 1]?.focus()
   }, [picking])
 
   const paging = state.pager !== null
@@ -94,6 +100,10 @@ export function Terminal({ model, pinned = NO_PINS, picking = false, onPick, onC
     } else if (key === 'ArrowDown' && !event.altKey) {
       event.preventDefault()
       model.historyNext()
+    } else if (key === 'Escape' && onLeave) {
+      // Tab is taken by completion, so Escape is the way out to the rest of the desk.
+      event.preventDefault()
+      onLeave()
     } else if (key === 'Tab' && !event.shiftKey && !ctrl) {
       // Tab completes. Shift-Tab still moves focus out of the terminal.
       event.preventDefault()
@@ -147,7 +157,7 @@ export function Terminal({ model, pinned = NO_PINS, picking = false, onPick, onC
       <div className="terminal-scroll" ref={scrollRef}>
         <div className="terminal-lines" ref={linesRef} role="log" aria-label="Terminal output">
           {state.lines.map((line) => {
-            const isPinned = pinned.has(line.id)
+            const isPinned = line.kind !== 'input' && pinned.has(line.text)
             const pickable = picking && line.kind !== 'input' && line.text.trim() !== ''
             return (
               <div

@@ -111,7 +111,7 @@ test('pages long output with more', async ({ page }) => {
 })
 
 test('clicking the terminal focuses the command line', async ({ page }) => {
-  await page.getByRole('heading', { name: 'Line Noise' }).click()
+  await page.getByRole('heading', { level: 1 }).click()
   await page.getByRole('log', { name: 'Terminal output' }).click()
   await expect(input(page)).toBeFocused()
 })
