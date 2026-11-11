@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { fill, finishLevel1, guidance, heard, input, output, panel, pin, type } from './play.ts'
+import { fill, finishLevel1, guidance, heard, output, panel, pin, type } from './play.ts'
 
 // Level 2, The Account Nobody Opened, played in the real game from briefing
 // to debrief with the keyboard alone.
@@ -9,7 +9,7 @@ test('Level 2 can be played from briefing to debrief with the keyboard alone', a
   await finishLevel1(page)
 
   // The briefing.
-  await expect(page.getByText('Level 2 of 2')).toBeVisible()
+  await expect(page.getByText('Level 2 of 3')).toBeVisible()
   await expect(page.getByText('An account does not appear by itself.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Begin' })).toBeFocused()
   await page.keyboard.press('Enter')
@@ -72,6 +72,8 @@ test('Level 2 can be played from briefing to debrief with the keyboard alone', a
 
   // What it means: two of five, chosen with the keyboard.
   await expect(guidance(page)).toContainText('Now say what it means.')
+  // The desk moves the keyboard to the new entry. Wait for that before pressing anything.
+  await expect(page.locator('#entry-suspects input').first()).toBeFocused()
   await page.getByRole('checkbox', { name: 'pike' }).focus()
   await page.keyboard.press('Space')
   await page.getByRole('checkbox', { name: 'root' }).focus()
@@ -89,19 +91,11 @@ test('Level 2 can be played from briefing to debrief with the keyboard alone', a
   // The proof.
   await pin(page, /^Pin as evidence: -rw-r--r--.*Sep\s+1 03:02 \/usr\/adm\/usage\.log/)
 
-  // Marge's last word, the card, and the end of the levels so far.
+  // Marge's last word, the card, and on to the next level.
   await heard(page, 'I am wiring a printer to that line tonight.')
   await expect(page.getByRole('heading', { name: 'Dormant accounts and drifting clocks' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Finish' })).toBeFocused()
+  await expect(page.getByRole('button', { name: 'Next level' })).toBeFocused()
   await page.keyboard.press('Enter')
-  await expect(page.getByRole('heading', { name: 'That is every level so far' })).toBeVisible()
-
-  // Both cards are in the binder.
-  await page.getByRole('button', { name: 'Back to the desk' }).click()
-  await page.getByRole('button', { name: 'Begin' }).click()
-  await page.getByRole('tab', { name: 'Binder' }).click()
-  await page.getByRole('button', { name: 'Cards' }).click()
-  await expect(panel(page)).toContainText('Logs are evidence')
-  await expect(panel(page)).toContainText('Dormant accounts and drifting clocks')
-  await expect(input(page)).toBeVisible()
+  await expect(page.getByText('Level 3 of 3')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Borrowed Authority' })).toBeVisible()
 })

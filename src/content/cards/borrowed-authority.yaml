@@ -1,0 +1,45 @@
+id: borrowed-authority
+title: Borrowed authority
+
+concept: >
+  A setuid program runs with the authority of its owner, not of the person
+  who starts it. If such a program will do whatever it is asked, then
+  everyone who can start it holds its owner's authority.
+
+today: >
+  Administrators audit for setuid (SUID) programs and take the bit off
+  wherever it is not needed. They hand out narrow `sudo` rules in place of
+  full root, and make sure that anything the system runs on a schedule can be
+  changed only by the administrator. The rule behind all of it is least
+  privilege: nothing gets more authority than its job needs. When a flaw
+  like this one is found, the fix is a patch, applied promptly.
+
+# Checked against the paper: "he used a subtle bug in the Gnu-Emacs text
+# editor to obtain system-manager privileges"; "As distributed, the program
+# uses the UNIX Set-User-ID-to-Root feature; that is, a section of the program
+# runs with system-manager privileges"; "the program did not prevent someone
+# from moving a file into the systems area"; "He used the movemail facility to
+# rename his script to masquerade as a utility periodically run by the
+# system. When the script was executed by the system, he gained
+# system-manager privileges."
+note: >
+  The 1986 intruder at Lawrence Berkeley Laboratory became system manager
+  through the mail facility of the Gnu-Emacs editor. As distributed, part of
+  that program ran set-user-ID to root, and it did not stop someone from
+  moving a file into the systems area. He wrote a shell script, used the mail
+  facility to put it in the place of a utility that the system ran
+  periodically, and gained system-manager privileges when the system ran it.
+
+source:
+  text: Clifford Stoll, "Stalking the Wily Hacker", Communications of the ACM 31(5), May 1988
+  url: https://www.exploit-db.com/download/44091
+
+simplified: >
+  The building is a picture of the trick, not the machine. You never type the
+  trick in this game, and the printout leaves out what his two-line file
+  said. The paper does not name the utility he replaced or say that he put it
+  back: the game uses `atrun`, a real job runner of the time, and adds the
+  tidying up. `mvmail` and Scribe are invented, and on a real system both
+  programs would be compiled, not short text files.
+
+domains: [General Security Concepts, "Threats, Vulnerabilities, and Attacks"]

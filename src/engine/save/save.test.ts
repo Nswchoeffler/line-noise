@@ -14,6 +14,10 @@ const SAVE: SaveData = {
       { type: 'answer', entry: 'which', answer: { kind: 'choose', chosen: ['a', 'c'] } },
       { type: 'answer', entry: 'proof', answer: { kind: 'pin', text: '-rwsr-xr-x  1 root', source: 'terminal' } },
       { type: 'answer', entry: 'fix', answer: { kind: 'write', text: 'I removed the bit.' } },
+      { type: 'move', move: { do: 'write', card: 'key' } },
+      { type: 'move', move: { do: 'send', spot: 'peg' } },
+      { type: 'move', move: { do: 'wait' } },
+      { type: 'move', move: { do: 'fix', change: 'strip' } },
     ],
   },
 }

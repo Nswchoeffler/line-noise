@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { loadGame, type LoadedGame } from '../engine/levels/loader.ts'
-import { testSource } from '../engine/levels/testing.ts'
+import { boardSource, testSource } from '../engine/levels/testing.ts'
 import { programs } from '../engine/shell/commands/index.ts'
 import { Game, type GameSnapshot } from './game.ts'
 
@@ -190,6 +190,27 @@ describe('saving and resuming', () => {
     expect(resumed.getState().session.shell.cwd).toBe('/data')
     expect(screen(resumed)).toEqual(screen(game))
     expect(resumed.snapshot()).toEqual(game.snapshot())
+  })
+
+  it('resumes in the middle of a board puzzle, with the board as it was left', () => {
+    content = loadGame(boardSource())
+    game = new Game(content, programs, { completed: ['L01-first'], current: null })
+    const { session } = game.getState()
+    session.begin()
+    session.continue()
+    session.move({ do: 'go', room: 'vault' })
+    session.move({ do: 'write', card: 'key' })
+    session.move({ do: 'send', spot: 'peg' })
+
+    const resumed = reload(game)
+    const state = resumed.getState().session.getState()
+    expect(state).toEqual(session.getState())
+    expect(state.puzzle!.play.state).toMatchObject({ hand: null, turnedAway: ['vault'] })
+    expect(state.puzzle!.play.state.spots['peg']?.card).toBe('key')
+
+    // And it carries on from there.
+    resumed.getState().session.move({ do: 'wait' })
+    expect(resumed.getState().session.getState().puzzle!.play.solved).toBe(true)
   })
 
   it('keeps logbook answers, including wrong ones', () => {

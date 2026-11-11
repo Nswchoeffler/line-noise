@@ -93,6 +93,7 @@ describe('the world', () => {
     expect(game.levels.map((l) => l.level.id)).toEqual([
       'L01-the-discrepancy',
       'L02-the-account-nobody-opened',
+      'L03-borrowed-authority',
     ])
   })
 
@@ -173,6 +174,19 @@ describe('every guided level', () => {
           expect(blank.label, `${level.id} ${entry.id}.${name} label`).toBeTruthy()
           expect(blank.hint, `${level.id} ${entry.id}.${name} hint`).toBeTruthy()
         }
+      }
+    }
+  })
+})
+
+describe('every guided level with a puzzle', () => {
+  it('says what each stage is for, and has a hint ready', () => {
+    const puzzles = game.levels.filter((l) => l.level.mode === 'guided' && l.level.puzzle)
+    expect(puzzles.map((l) => l.level.id)).toEqual(['L03-borrowed-authority'])
+    for (const { level } of puzzles) {
+      for (const stage of level.puzzle!.stages) {
+        expect(stage.goal.trim(), `${level.id} ${stage.id} goal`).not.toBe('')
+        expect(stage.hints.length, `${level.id} ${stage.id} hints`).toBeGreaterThan(0)
       }
     }
   })

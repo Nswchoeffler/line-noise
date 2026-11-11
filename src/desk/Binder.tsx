@@ -80,6 +80,18 @@ function LevelNotes({ loaded, level }: { loaded: LoadedLevel; level: LevelState 
               </li>
             )
           }
+          if ('puzzle' in beat) {
+            const stage = loaded.level.puzzle?.stages.find((s) => s.id === beat.puzzle.stage)
+            if (!stage) return null
+            return (
+              <li key={i}>
+                <strong>
+                  {loaded.level.puzzle?.title}, {stage.title}:
+                </strong>{' '}
+                <RichText text={stage.goal} /> <em>Cleared.</em>
+              </li>
+            )
+          }
           if ('advance' in beat) {
             return (
               <li key={i}>
@@ -161,6 +173,14 @@ function Help({ game }: { game: Game }) {
         <li>
           <code>help</code> lists every command. <code>man</code> and a command name explains one.
         </li>
+      </ul>
+      <h4>Puzzles</h4>
+      <ul>
+        <li>
+          Now and then a puzzle on a whiteboard takes the terminal's place. Every move is a button: click it, or
+          move to it with Tab and press Enter.
+        </li>
+        <li>What each move did is written under the board. Hints are free, and you can start a part again.</li>
       </ul>
       <h4>Getting around</h4>
       <ul>

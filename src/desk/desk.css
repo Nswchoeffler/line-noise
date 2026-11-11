@@ -57,7 +57,8 @@ pre {
 /* Paper surfaces are light, so their form controls should be too. */
 .guidance,
 .panel,
-.screen {
+.screen,
+.board {
   color-scheme: light;
 }
 
@@ -295,6 +296,245 @@ a {
   padding: 0.4rem 0.6rem;
   border: 1px dashed var(--ink-dim);
   border-radius: 4px;
+}
+
+.guidance-hints {
+  margin-top: 0.4rem;
+}
+
+.guidance-hint-list {
+  margin: 0 0 0.5rem;
+  padding: 0.4rem 0.6rem 0.4rem 1.8rem;
+  border-left: 4px solid var(--accent);
+  background: #fbf4dc;
+}
+
+/* ---- the puzzle board ---------------------------------------------------------- */
+
+/* A whiteboard, standing where the terminal usually is. */
+.desk-board {
+  display: flex;
+  min-height: 0;
+}
+
+.board {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.75rem 1rem;
+  background: #fcfcf7;
+  color: var(--ink);
+  border: 6px solid #8d8472;
+  border-radius: 6px;
+}
+
+.board p {
+  margin: 0;
+}
+
+.board-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 1rem;
+}
+
+.board-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.board-clock {
+  margin-left: auto !important;
+  font-family: var(--mono);
+  font-weight: 600;
+}
+
+.board-cleared {
+  color: var(--good);
+}
+
+.board-rooms {
+  display: grid;
+  flex: none;
+  grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.board-room {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.5rem 0.65rem 0.6rem;
+  border: 2px solid var(--ink);
+  border-radius: 4px;
+  background: #fff;
+  font-size: 0.93rem;
+  line-height: 1.4;
+}
+
+/* The room the player is in: a heavier frame as well as the word "You". */
+.board-room-here {
+  border-width: 4px;
+  padding: calc(0.5rem - 2px) calc(0.65rem - 2px) calc(0.6rem - 2px);
+}
+
+.board-room h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.board-door {
+  padding-bottom: 0.35rem;
+  border-bottom: 2px dashed var(--paper-edge);
+  color: var(--ink-dim);
+}
+
+.board-badge {
+  display: inline-block;
+  padding: 0 0.4em;
+  border: 1px solid var(--ink);
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 0.85em;
+}
+
+.board-spot {
+  padding: 0.3rem 0.45rem;
+  background: #fff6b8;
+  border-left: 4px solid var(--ink-dim);
+}
+
+.board-changed {
+  color: var(--ink-dim);
+}
+
+/*
+ * Under the rooms: the moves on the left and what they did on the right, so
+ * the result of a move is always beside the button that made it.
+ */
+.board-bottom {
+  flex: 1;
+  min-height: 12rem;
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 0.75rem;
+}
+
+.board-bottom-solo {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.board-moves {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-height: 0;
+  overflow-y: auto;
+  /* Room for the focus ring of the buttons along the edges. */
+  padding: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.board-happened {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-height: 0;
+}
+
+.board-moves .button {
+  margin: 0.1rem 0.15rem 0.1rem 0;
+  padding: 0.15rem 0.55rem;
+  font-weight: 500;
+}
+
+.board-moves .button::first-letter,
+.board-spot strong::first-letter {
+  text-transform: uppercase;
+}
+
+.board-spot strong {
+  display: inline-block;
+}
+
+.board-moves-label {
+  font-weight: 600;
+}
+
+.board-fixes ul {
+  margin: 0.3rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.board-fixes li {
+  margin-bottom: 0.3rem;
+}
+
+.board-fixes .button {
+  text-align: left;
+}
+
+.board-tried {
+  display: block;
+  margin: 0 0 0.2rem 0.2rem;
+  color: var(--bad);
+  font-weight: 600;
+}
+
+.board-log-title {
+  margin: 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.board-log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  list-style: none;
+  background: #0d0f0c;
+  color: #d8e8c8;
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.board-log li {
+  padding-left: 1.2em;
+  text-indent: -1.2em;
+}
+
+.board-log li::before {
+  content: '> ';
+  color: #8fa27e;
+}
+
+.board-log-empty {
+  color: #8fa27e;
+  font-style: italic;
+}
+
+/* The verdict on a change, and a door staying shut, stand out by weight as well as words. */
+.board-log li[data-line='fix_held'],
+.board-log li[data-line='fix_worked'],
+.board-log li[data-line='round_grants'] {
+  font-weight: bold;
+  color: #fff;
 }
 
 /* ---- tabs and panel ---------------------------------------------------------- */
@@ -836,6 +1076,19 @@ a {
   .desk-terminal {
     height: 24rem;
     flex: none;
+  }
+
+  .desk-board {
+    height: auto;
+  }
+
+  .board-bottom {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .board-log {
+    min-height: 8rem;
+    max-height: 14rem;
   }
 
   .guidance {

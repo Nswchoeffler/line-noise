@@ -6,7 +6,8 @@ import { buildWorld, loadGame, type LoadedGame } from './loader.ts'
 import { grade } from './logbook.ts'
 import { LevelSession, type LevelEvent } from './runner.ts'
 import type { LogbookEntry } from './schema.ts'
-import { TEST_FILES, testSource } from './testing.ts'
+import type { Move } from '../board/schema.ts'
+import { BOARD_FILES, boardSource, TEST_FILES, testSource } from './testing.ts'
 
 let game: LoadedGame
 
@@ -517,5 +518,135 @@ describe('an open level on a second host', () => {
     expect(s.answer('proof', { kind: 'pin', text: listing.trimEnd(), source: 'terminal' }).correct).toBe(true)
     expect(s.answer('fix', { kind: 'write', text: 'Take the setuid bit off the helper.' }).correct).toBe(true)
     expect(s.getState()).toMatchObject({ phase: 'debrief', complete: true })
+  })
+})
+
+describe('a level with a board puzzle', () => {
+  const TRICK: Move[] = [{ do: 'write', card: 'key' }, { do: 'send', spot: 'peg' }, { do: 'wait' }]
+  let s: LevelSession
+
+  beforeEach(() => {
+    game = loadGame(boardSource())
+    s = start(1)
+    s.begin()
+  })
+
+  const showing = (): string => Object.keys(s.getState().beat ?? { nothing: true })[0]!
+
+  it('has no board to show until a puzzle beat is reached', () => {
+    expect(showing()).toBe('say')
+    expect(s.getState().puzzle).toBeNull()
+    s.move({ do: 'wait' })
+    expect(s.events).toEqual([{ type: 'begin' }])
+  })
+
+  it('puts the stage on the board with the moves open to the player', () => {
+    s.continue()
+    expect(s.getState().beat).toEqual({ puzzle: { stage: 'gold' } })
+    const view = s.getState().puzzle!
+    expect(view).toMatchObject({ title: 'Test board', step: 'Round', number: 1, of: 2 })
+    expect(view.stage.goal).toBe('Get a gold badge.')
+    expect(view.play.state).toMatchObject({ room: 'hall', badges: ['tin'], hand: null })
+    expect(view.moves).toEqual([
+      { do: 'go', room: 'vault' },
+      { do: 'write', card: 'sweep' },
+      { do: 'write', card: 'key' },
+      { do: 'wait' },
+    ])
+  })
+
+  it('stays on the stage through any number of moves, and moves on when it is cleared', () => {
+    s.continue()
+    s.move({ do: 'go', room: 'vault' })
+    s.move({ do: 'wait' })
+    expect(showing()).toBe('puzzle')
+    expect(s.getState().puzzle!.play.state.turnedAway).toEqual(['vault'])
+    expect(s.getState().objectives.map((o) => o.met)).toEqual([false, false])
+
+    for (const move of TRICK) s.move(move)
+    expect(s.getState().beat).toEqual({ say: { who: 'guide', text: 'Now mend it.' } })
+    expect(s.getState().objectives.map((o) => o.met)).toEqual([true, false])
+
+    // The cleared stage stays on the board while it is talked over, with nothing left to press.
+    const view = s.getState().puzzle!
+    expect(view.stage.id).toBe('gold')
+    expect(view.play.solved).toBe(true)
+    expect(view.moves).toEqual([])
+  })
+
+  it('records only the moves that did something', () => {
+    s.continue()
+    s.move({ do: 'place', spot: 'shelf' }) // nothing in hand
+    s.move({ do: 'reset' }) // nothing to start again from
+    s.move({ do: 'fix', change: 'strip' }) // not a fix stage
+    s.move({ do: 'write', card: 'key' })
+    expect(s.events).toEqual([
+      { type: 'begin' },
+      { type: 'continue' },
+      { type: 'move', move: { do: 'write', card: 'key' } },
+    ])
+  })
+
+  it('ignores moves once the stage is cleared, and commands do not move the puzzle on', () => {
+    s.continue()
+    s.run('ls')
+    expect(showing()).toBe('puzzle')
+    for (const move of TRICK) s.move(move)
+    const events = s.events.length
+    s.move({ do: 'wait' })
+    expect(s.events).toHaveLength(events)
+  })
+
+  it('clears a fix stage only with a change that stops the trick', () => {
+    s.continue()
+    for (const move of TRICK) s.move(move)
+    s.continue()
+    expect(s.getState().beat).toEqual({ puzzle: { stage: 'mend', who: 'guide' } })
+    expect(s.getState().puzzle!.moves).toEqual([
+      { do: 'fix', change: 'paint' },
+      { do: 'fix', change: 'strip' },
+    ])
+
+    s.move({ do: 'fix', change: 'paint' })
+    expect(showing()).toBe('puzzle')
+    expect(s.getState().puzzle!.play.tried).toEqual([{ change: 'paint', held: false }])
+
+    s.move({ do: 'fix', change: 'strip' })
+    expect(showing()).toBe('prompt')
+    expect(s.getState().objectives.every((o) => o.met)).toBe(true)
+    expect(s.getState().puzzle!.play).toMatchObject({ stage: 'mend', solved: true, change: 'strip' })
+
+    s.run('ls')
+    expect(s.getState().phase).toBe('debrief')
+  })
+
+  it('rebuilds exactly the same level when its events are played back', () => {
+    s.continue()
+    s.move({ do: 'go', room: 'vault' })
+    for (const move of TRICK) s.move(move)
+    s.continue()
+    s.move({ do: 'fix', change: 'paint' })
+
+    const replay = start(1)
+    for (const event of s.events) replay.apply(event)
+    expect(replay.getState()).toEqual(s.getState())
+    expect(replay.getState().puzzle!.play.tried).toEqual([{ change: 'paint', held: false }])
+  })
+
+  it('rejects a level whose beats and puzzle do not agree', () => {
+    const level = BOARD_FILES['levels/L02-board.yaml']!
+    const broken = (find: string, replace: string): (() => unknown) => {
+      expect(level).toContain(find)
+      return () => loadGame(boardSource({ 'levels/L02-board.yaml': level.replace(find, replace) }))
+    }
+    expect(broken('puzzle: { stage: gold }', 'puzzle: { stage: silver }')).toThrow('plays puzzle stage "silver"')
+    expect(broken('puzzle: { stage: mend, who: guide }', 'puzzle: { stage: gold }')).toThrow(
+      'puzzle stage played twice: gold',
+    )
+    expect(broken('when: { solved: mend }', 'when: { solved: polish }')).toThrow('waits for puzzle stage "polish"')
+    expect(broken('reads: peg', 'reads: nail')).toThrow(/no spot called .*nail/)
+    expect(broken('set: { courier: { badge: null } }', 'set: { courier: { badge: brass } }')).toThrow(
+      /change strip[\s\S]*no badge called .*brass/,
+    )
   })
 })

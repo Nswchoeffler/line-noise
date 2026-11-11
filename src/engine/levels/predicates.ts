@@ -18,6 +18,8 @@ export interface PredicateContext {
   objectives: ReadonlyMap<string, number>
   /** Logbook entries completed so far. */
   logged: ReadonlySet<string>
+  /** Stages of the board puzzle cleared so far. */
+  solved: ReadonlySet<string>
 }
 
 const BITS = { setuid: S_ISUID, setgid: S_ISGID, sticky: S_ISVTX }
@@ -87,6 +89,7 @@ export function holds(p: Predicate, ctx: PredicateContext): boolean {
 
   if (p.logged !== undefined && !ctx.logged.has(p.logged)) return false
   if (p.met !== undefined && !ctx.objectives.has(p.met)) return false
+  if (p.solved !== undefined && !ctx.solved.has(p.solved)) return false
 
   // ---- the world right now ----
   const hostName = p.host ?? ctx.currentHost

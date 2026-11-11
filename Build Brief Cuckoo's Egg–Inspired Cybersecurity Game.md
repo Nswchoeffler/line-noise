@@ -2,6 +2,8 @@
 
 Nov 10, 2026 · @bob
 
+> **Revised Nov 11, 2026: Level 3 is a puzzle.** The hands-on replay in Level 3 is no longer typed at a sandbox host. It is a board puzzle, "the building at night", that mimics the hoops the intruder went through, followed by a look at the real programs. The sections this changes are marked *(revised)*. Levels 1 and 2 are as first written.
+
 ## Summary
 
 Line Noise (working title) is a browser game that teaches security fundamentals by having the player hunt an intruder from a simulated 1986 Unix terminal.
@@ -64,7 +66,7 @@ The player sits at a desk, investigates in a terminal, and clears each level by 
 
 - Every level runs brief, investigate, logbook, debrief card.
 - Objectives check world state and logbook answers, never exact command strings.
-- Intruder replay: read his transcript, repeat the technique on a sandbox host, then fix it.
+- Intruder replay *(revised)*: work the technique out hands-on, fix it, then recognise it in his transcript. In Level 3 the hands-on part is a board puzzle that mimics his path. The game cannot and need not simulate the real thing; the puzzle is there to be fun and to make the idea stick. Later levels choose puzzle or terminal case by case.
 - A debrief card holds the concept in two sentences, the modern equivalent, and one real-world note.
 - Hints are free. No score. No timers before Level 12.
 - Pinning evidence means clicking a terminal or printout line to attach it to a logbook entry.
@@ -100,7 +102,7 @@ Thirteen levels cover the investigation from first anomaly to cleanup; each teac
 | --- | --- | --- | --- | --- |
 | 1 | The Discrepancy | Reconciles two sets of usage books and finds an account with usage but no billing record | Logs as evidence, anomaly detection, files and pipes | Usage and billing reconciliation, cost-anomaly alerts |
 | 2 | The Account Nobody Opened | Works out whose account it is, spots a dormant account in use, corrects for clock drift to build a timeline | Account lifecycle, login records, time sync | Access reviews, orphaned accounts, NTP and UTC in forensics |
-| 3 | Borrowed Authority | Reads the intruder's transcript, repeats the root trick in a sandbox, then removes the setuid bit | Permissions, setuid, least privilege, privilege escalation | SUID audits, sudo rules, writable scheduled-job paths, patching |
+| 3 | Borrowed Authority *(revised)* | Works out the root trick as a five-hoop puzzle at a whiteboard, closes the hole there, then finds each puzzle piece in the intruder's transcript and on the real system | Permissions, setuid, least privilege, privilege escalation | SUID audits, sudo rules, writable scheduled-job paths, patching |
 | 4 | Passwords in the Clear | Sweeps mail and command files the way the intruder did and counts exposed passwords | Secrets in files, credential hygiene | Secrets in repos and config files, secret scanners |
 | 5 | The Dictionary | Runs a toy dictionary attack on the lab's own password file to measure exposure | Hashing versus encryption, dictionary attacks, password policy | Salted slow hashes, breached-password lists, MFA |
 | 6 | Default Doors | Tallies the intruder's default-login attempts elsewhere and audits the lab's own hosts | Default credentials, enumeration, attack surface | Default device passwords, exposed admin panels, credential stuffing |
@@ -161,9 +163,9 @@ v0.1 is three guided levels on one simulated host, about an hour of play, runnin
 
 ### World
 
-- One host, `granite`, plus a throwaway copy named `sandbox` for the Level 3 replay.
+- One host, `granite`. *(Revised: no `sandbox` copy. The Level 3 replay happens on the puzzle board.)*
 - Users: `root`, `marge`, `ops` (the player), `hollis` (dormant), `pike` (rogue), and six ordinary staff accounts.
-- An in-game clock that levels can advance, and a job runner that fires on a timer.
+- An in-game clock that levels can advance. *(Revised: no job runner in v0.1. The puzzle has its own clock and its own night round.)*
 
 | Path | Holds |
 | --- | --- |
@@ -172,8 +174,8 @@ v0.1 is three guided levels on one simulated host, about an hour of play, runnin
 | `/usr/local/billing/requests/` | One paperwork file per approved account |
 | `/etc/passwd` | The account list |
 | `/usr/adm/gateway.log` | Connection log copied from the gateway, whose clock runs six minutes fast |
-| `/usr/local/bin/mvmail` | The mail helper, owned by root with the setuid bit set |
-| `/usr/lib/atrun` | The job runner, executed as root every few minutes |
+| `/usr/local/bin/mvmail` | The mail helper, owned by root with the setuid bit set. There to be looked at: in the game it only prints how it is used. *(revised)* |
+| `/usr/lib/atrun` | The job runner, which a real system would execute as root every few minutes. There to be looked at. *(revised)* |
 
 ### Shell
 
@@ -197,22 +199,33 @@ v0.1 is three guided levels on one simulated host, about an hour of play, runnin
 - **Logbook:** a five-line timeline in corrected time; which accounts are suspect; the evidence that someone had root.
 - **Debrief:** account lifecycle, dormant accounts, clock sync. Today: access reviews, orphaned accounts, NTP and UTC in forensics.
 
-### Level 3: Borrowed Authority (about 25 minutes)
+### Level 3: Borrowed Authority (about 25 minutes) *(revised)*
 
-- **Setup:** a printout lands in the tray. It is the intruder's session from last night.
-- **Beats:** read the transcript; `ls -l` on `mvmail` shows the `s` bit; `man chmod` explains it; note that `atrun` runs as root on a timer.
-- **Replay on `sandbox`:** write a two-line script; use `mvmail` to place it over `atrun`; wait for the timer; `whoami` now says root; put the original back.
-- **Fix:** `chmod u-s` on `mvmail`; confirm the replay now fails.
-- **Logbook:** pick the three conditions that made it work, then write the fix in one sentence.
+The trick is taught as a puzzle first and named afterwards. The player never types it.
+
+- **Setup:** Marge's printer caught the intruder's session last night. An ordinary account became root. She explains it at the whiteboard before she hands over the paper.
+- **The puzzle, "the building at night":** rooms whose doors open only for certain badges. The player wears a STAFF badge and wants the Control Room, which opens for MASTER. Five short hoops, each adding one idea:
+
+  | Hoop | The player… | Stands for |
+  | --- | --- | --- |
+  | 1. Doors | Tries a door the badge opens and one it does not | File permissions; an account is a badge |
+  | 2. The courier | Gets a card into the Control Room by handing it to Dot, who wears a MASTER badge on loan and takes anything anywhere | A setuid-root helper that does not check the destination |
+  | 3. The night round | Has Dot put a card on the hook that Walt, the watchman, obeys every five minutes, and is handed a MASTER badge | A program the system runs as root on a timer |
+  | 4. As you found it | Puts the original card back; the "put there" time on the hook still changes | Covering tracks, and the modified time that gives it away |
+  | 5. Close the hole | Changes chairs: picks one change to the building and watches the same trick tried again | The fix. Two changes stop it (take the loaned badge away; make the courier check the sender), two do not (a heavier lock; a slower round) |
+
+- **Then the real names:** the transcript lands in the tray. Two look-only commands: `ls -l` on `mvmail` shows the `s` bit, and `ls -l` on `atrun` shows root as the only writer and last night's modified time.
+- **Logbook:** which program is the courier and which the hook; the letter that is the loaned badge; pick the three conditions that made it work; pin the transcript line where the helper is used; write the fix in one sentence.
 - **Debrief:** permissions, setuid, least privilege, privilege escalation. Today: SUID audits, sudo rules, writable scheduled-job paths, patching. History note: the real 1986 intruder abused an editor's setuid mail helper the same way.
-- **Cliffhanger:** Marge says to leave the hole open on `granite` for now. That sets up Level 7.
+- **Cliffhanger:** Marge names the one-line fix and declines to type it. The hole stays open on `granite` for now. That sets up Level 7.
+- **Design rules for the puzzle:** every move is a button and every result is a sentence; hints are free; nothing is scored; a failed move teaches a rule. No change in hoop 5 is marked right or wrong in the level file: the trick is replayed against the changed building and the rules decide.
 
 ### Acceptance criteria
 
 - [ ] A first-time terminal user finishes Levels 1 to 3 in under 60 minutes with no outside help.
 - [ ] Every listed command works alone and in pipes, with unit tests per command.
 - [ ] Each objective accepts any valid route, not one exact command.
-- [ ] The Level 3 replay succeeds before the fix and fails after it, because of the permission model and not a script flag.
+- [ ] The Level 3 trick succeeds before the fix and fails after it, because of the puzzle's rules and not a script flag. *(Revised: the same test, applied to the board puzzle in place of a sandbox host.)*
 - [ ] Progress and logbook survive a page reload.
 - [ ] Each level ends with a debrief card saved to the binder.
 - [ ] Fully playable by keyboard on current desktop Chrome, Firefox and Safari.
@@ -239,6 +252,7 @@ Claude Code should check current library docs before installing and may propose 
 | `vfs` | In-memory filesystem per host: owner, group, mode bits including setuid, modified time. |
 | `shell` | Parser for quotes, pipes and redirects. Command registry. Each command is a pure function of arguments, input and context. |
 | `world` | Hosts, users, the in-game clock, scheduled jobs, an event bus. |
+| `board` | *(Added with the revision.)* Board puzzles: rooms with badge-locked doors, a courier, a round on a timer. Pure rules, described in the level file. |
 | `intruder` | Scripted sessions: a timeline of commands applied to the world and rendered as printouts. Real-time playback from v0.3. |
 | `levels` | Declarative level files and the runner that loads them, checks objectives and drives prompts. |
 | `desk` | The interface: terminal, logbook, printout tray, binder. Pager, phone and map later. |
@@ -247,7 +261,7 @@ Claude Code should check current library docs before installing and may propose 
 ### Principles
 
 - **Levels are data.** The engine contains no story text, names or level-specific branches.
-- **The permission model is real.** The Level 3 exploit works because `mvmail` runs as root and writes where it is told. No special-casing.
+- **The rules are real.** *(revised)* The filesystem enforces permissions for every command. The Level 3 trick works on the puzzle board, and stops working after the fix, because a door opens only for a badge it is set to open for. No special-casing, no right-answer flags.
 - **Objectives are predicates** over world state, command history and logbook answers.
 - **Guidance is a level property:** `guided`, `scaffolded` or `open`. The interface reads it; the engine does not care.
 - **Deterministic.** Same inputs, same world. The clock only moves when a level or command moves it.
@@ -261,16 +275,24 @@ mode: guided
 host: granite
 filesystem: overlays/L03.yaml      # files added or changed for this level
 printouts: [intruder/L03-session.yaml]
+puzzle:                            # revised: the board, and its stages
+  board: { rooms: {}, courier: {}, round: {} }
+  stages:
+    - { id: round, done: [{ player_has: master }] }
+    - { id: close, fix: { trick: [], works_when: [], changes: {} } }
 beats:
-  - say: { who: marge, text: "Read the printout before you touch anything." }
+  - say: { who: marge, text: "It is easier to see as a building." }
+  - puzzle: { stage: round }
+  - puzzle: { stage: close }
+  - deliver: { item: session }
   - prompt: { run: "ls -l /usr/local/bin/mvmail", explain: "Look at the fourth character." }
 objectives:
+  - id: trick
+    when: { solved: round }
+  - id: closed
+    when: { solved: close }
   - id: saw-setuid
-    when: { command_ran: ls, touched: /usr/local/bin/mvmail }
-  - id: replayed
-    when: { host: sandbox, whoami: root }
-  - id: fixed
-    when: { host: sandbox, mode_lacks: { path: /usr/local/bin/mvmail, bit: setuid } }
+    when: { output_matches: "^-rws.*mvmail" }
 logbook:
   - ask: "Which three conditions made this work?"
     choose: 3
@@ -324,7 +346,7 @@ The first session builds the engine far enough to play Level 1 end to end, then 
 6. Build the desk: terminal, logbook, printout tray, binder.
 7. Author Level 1 and play it start to finish. Fix the level format now, while it is cheap.
 8. Author Level 2.
-9. Add the clock, the job runner and the `sandbox` host. Author Level 3.
+9. *(Revised.)* Add the board puzzle: its rules, the `puzzle` beat and the whiteboard on the desk. Author Level 3.
 10. Add save and load, debrief cards, and deploy.
 
 ### Do not build yet

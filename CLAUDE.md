@@ -21,9 +21,9 @@ by the desk's end-to-end tests) and `?bench` (a bare terminal).
 
 ## Layout
 
-- `src/engine/` is story-agnostic: `vfs`, `shell`, `world`, `intruder`, `levels`, `save`.
+- `src/engine/` is story-agnostic: `vfs`, `shell`, `world`, `board`, `intruder`, `levels`, `save`.
 - `src/desk/` is the React interface: terminal, logbook, printout tray, binder.
-- `src/content/` is all story data: world files, levels, printouts, cards, manual pages.
+- `src/content/` is all story data: world files, levels, puzzles, printouts, cards, manual pages.
 - `e2e/` holds one Playwright run per level.
 - Unit tests sit beside the code as `*.test.ts`.
 
@@ -51,14 +51,29 @@ Decisions made since the brief:
   be pinned as evidence.
 - **Hosting:** GitHub Pages, published by `.github/workflows/ci.yml`.
 - **Git:** one local commit per build step. Push only when asked.
+- **Level 3 is a puzzle** (approved 11 November 2026; the brief is revised to
+  match). The hands-on replay is a board puzzle that mimics the hoops the
+  intruder went through, not a shell replay on a sandbox host. The game does
+  not simulate the real exploit: the player never types it, `mvmail` only
+  prints its usage, and the printout leaves out what his file said. Puzzle
+  first, real names after. The aim is that it is fun and that it teaches.
+- **Level format:** a level may carry a `puzzle` (a board and its stages),
+  played by `puzzle` beats, with the predicate `solved`. Added for Level 3;
+  the Level 1 and 2 files did not change.
+- **Focus moves with the step.** The desk moves keyboard focus in a layout
+  effect, in the same instant a step changes, never a frame later. A delay
+  let fast input land in the wrong place and made the end-to-end tests flaky.
 
 ## Principles
 
 - **Levels are data.** The engine contains no story text, names or
   level-specific branches. Anything under `src/engine/` must work for a
   different story.
-- **The permission model is real.** The Level 3 exploit works because `mvmail`
-  runs as root and writes where it is told. No special-casing.
+- **The rules are real.** The filesystem enforces permissions for every
+  command. The Level 3 trick works on the puzzle board, and stops working
+  after the fix, because a door opens only for a badge it is set to open for.
+  No special-casing, and no right-answer flags in a level file: where a
+  puzzle asks for a fix, the trick is replayed and the rules decide.
 - **Objectives are predicates** over world state, command history and logbook
   answers. Never match exact command strings.
 - **Guidance is a level property:** `guided`, `scaffolded` or `open`. The
@@ -95,7 +110,8 @@ Decisions made since the brief:
 ### Safety and tone
 
 - Everything is simulated. No real hosts, no outbound connections, no working
-  exploit code for live systems.
+  exploit code for live systems. Intruder techniques are taught by analogy
+  (a puzzle) or by reading, not by having the player carry them out.
 - Replays always end with the fix. The player is a defender who needs to
   understand the attack.
 - The intruder is a patient, methodical adversary, not a genius and not a cartoon.

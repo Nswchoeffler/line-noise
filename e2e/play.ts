@@ -101,3 +101,41 @@ export async function finishLevel1(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Next level' }).click()
   await expect(page.getByRole('heading', { name: 'The Account Nobody Opened' })).toBeVisible()
 }
+
+/** From the briefing of Level 2 to the briefing of Level 3. */
+export async function finishLevel2(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Begin' }).click()
+  await rush(page, [
+    'grep pike /etc/passwd',
+    'ls /usr/local/billing/requests',
+    'ls -l /etc/passwd',
+    'last pike',
+    'last ttyn1',
+    'finger hollis',
+    'ls -l /usr/adm/usage.log',
+    'grep hollis /usr/adm/usage.log',
+    'grep ttyn1 /usr/adm/gateway.log',
+  ])
+  const entries: [string, string[]][] = [
+    ['dormant', ['02:14', 'hollis']],
+    ['created', ['02:31']],
+    ['first-use', ['24', '03:05']],
+    ['gateway', ['02:53', '02:47']],
+    ['edit', ['03:02', 'root']],
+  ]
+  for (const [entry, values] of entries) {
+    for (const [blank, value] of values.entries()) {
+      await page.locator(`#entry-${entry}`).getByRole('textbox', { name: `Blank ${blank + 1}` }).fill(value)
+    }
+    await page.locator(`#entry-${entry}`).getByRole('button', { name: 'Check' }).click()
+    await expect(page.locator(`#entry-${entry}`)).toContainText('Logged')
+  }
+  await page.getByRole('checkbox', { name: 'hollis' }).check()
+  await page.getByRole('checkbox', { name: 'pike' }).check()
+  await page.locator('#entry-suspects').getByRole('button', { name: 'Check' }).click()
+  await page.getByRole('button', { name: 'Pin a line' }).click()
+  await page.getByRole('button', { name: /^Pin as evidence: -rw-r--r--.*usage\.log/ }).click()
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await page.getByRole('button', { name: 'Next level' }).click()
+  await expect(page.getByRole('heading', { name: 'Borrowed Authority' })).toBeVisible()
+}

@@ -4,6 +4,7 @@
 // so no part of the simulated world needs to be stored.
 
 import { z } from 'zod'
+import { MoveSchema } from '../board/schema.ts'
 import type { LevelEvent } from '../levels/runner.ts'
 import { ENGINE_VERSION } from '../version.ts'
 
@@ -29,6 +30,8 @@ const EventSchema = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('command'), line: z.string() }),
   z.strictObject({ type: z.literal('continue') }),
   z.strictObject({ type: z.literal('answer'), entry: z.string(), answer: AnswerSchema }),
+  // Added with board puzzles. Older saves hold none, so they read as they always did.
+  z.strictObject({ type: z.literal('move'), move: MoveSchema }),
 ])
 
 const SaveSchema = z.object({

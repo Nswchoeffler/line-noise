@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import type { LevelState } from '../engine/levels/runner.ts'
 import type { Beat } from '../engine/levels/schema.ts'
-import { RichText } from './RichText.tsx'
+import { InlineText, RichText } from './RichText.tsx'
 
 export interface GuidanceProps {
   level: LevelState
@@ -15,6 +15,8 @@ export interface GuidanceProps {
 function lastResult(beats: readonly Beat[], beatIndex: number): { run: string; result: string } | null {
   for (let i = Math.min(beatIndex, beats.length) - 1; i >= 0; i--) {
     const beat = beats[i]!
+    // A puzzle in between is a change of subject: the old command is no longer on the screen.
+    if ('puzzle' in beat) return null
     if ('prompt' in beat) {
       return beat.prompt.result === undefined ? null : { run: beat.prompt.run, result: beat.prompt.result }
     }
@@ -40,6 +42,30 @@ function Recap({ run, result }: { run: string; result: string }) {
   )
 }
 
+/** Free hints for a puzzle stage, shown one at a time, gentlest first. */
+function Hints({ hints }: { hints: readonly string[] }) {
+  const [shown, setShown] = useState(0)
+  if (hints.length === 0) return null
+  return (
+    <div className="guidance-hints">
+      {shown > 0 && (
+        <ol className="guidance-hint-list" role="status">
+          {hints.slice(0, shown).map((hint, i) => (
+            <li key={i}>
+              <InlineText text={hint} />
+            </li>
+          ))}
+        </ol>
+      )}
+      {shown < hints.length && (
+        <button type="button" className="button button-quiet" onClick={() => setShown(shown + 1)}>
+          {shown === 0 ? 'Give me a hint' : `Another hint (${shown} of ${hints.length} shown)`}
+        </button>
+      )}
+    </div>
+  )
+}
+
 /**
  * The mentor's voice, just above the terminal. In a guided level it shows the
  * current beat: something said, a command to type with what it does, a
@@ -52,7 +78,7 @@ export function Guidance({ level, beats, onContinue, onOpenLogbook }: GuidancePr
 
   // Each new step starts at the top, never part-way down the last one.
   const box = useRef<HTMLElement>(null)
-  useEffect(() => {
+  useLayoutEffect(() => {
     box.current?.scrollTo?.({ top: 0 })
   }, [level.beatIndex])
 
@@ -120,6 +146,23 @@ export function Guidance({ level, beats, onContinue, onOpenLogbook }: GuidancePr
             your last line back so you can fix it instead of retyping.
           </p>
         )}
+      </>
+    )
+  } else if ('puzzle' in beat && level.puzzle) {
+    const { stage, step, number, of } = level.puzzle
+    body = (
+      <>
+        <h2 className="guidance-heading">{beat.puzzle.who ?? 'The puzzle'}</h2>
+        <p className="guidance-label">
+          {step} {number} of {of}: {stage.title}
+        </p>
+        <RichText text={stage.goal} />
+        {number === 1 && (
+          <p>
+            Play with the buttons on the board below. Nothing is scored: a move that fails only shows you a rule.
+          </p>
+        )}
+        <Hints key={stage.id} hints={stage.hints} />
       </>
     )
   } else if ('log' in beat) {

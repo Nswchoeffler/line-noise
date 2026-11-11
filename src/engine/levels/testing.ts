@@ -1,6 +1,7 @@
 // A tiny, story-free game for testing the level machinery. Written as YAML
 // text, exactly as real content is, so the loader is exercised too.
 
+import { LINE_KEYS } from '../board/schema.ts'
 import type { ContentSource } from './loader.ts'
 
 export const TEST_FILES: Record<string, string> = {
@@ -143,6 +144,75 @@ note: Another real note.
 source: { text: A source, url: "https://example.com/paper" }
 simplified: The real program was compiled, not a script.
 `,
+}
+
+/**
+ * A second level with a board puzzle in it, in place of the usual one: a hall
+ * anyone may enter, a vault only a gold badge opens, a runner who carries
+ * cards on a loaned badge, and a warden who does what the card on a peg says.
+ */
+export const BOARD_FILES: Record<string, string> = {
+  'game.yaml': TEST_FILES['game.yaml']!.replace('levels/L02-second.yaml', 'levels/L02-board.yaml'),
+
+  'levels/L02-board.yaml': `
+id: L02-board
+number: 2
+title: Board
+mode: guided
+host: box
+user: ops
+brief: Get a gold badge, then stop the trick.
+puzzle:
+  title: Test board
+  step: Round
+  board:
+    start: "09:00"
+    badges: { tin: TIN, gold: GOLD }
+    rooms:
+      hall: { name: Hall, opens_for: [tin, gold] }
+      vault: { name: Vault, opens_for: [gold] }
+    spots:
+      shelf: { name: shelf, room: hall }
+      peg: { name: peg, room: vault, holds: sweep, changed: long ago }
+    cards:
+      sweep: { text: Sweep up. }
+      key: { text: Hand over gold., grants: { badge: gold, in: hall } }
+    player: { room: hall, badges: [tin] }
+    courier: { name: Runner, about: Carries cards., room: hall, badge: gold }
+    round: { name: Warden, about: Obeys the peg., badge: gold, every: 10, reads: peg }
+    lines:
+${LINE_KEYS.map((key) => `      ${key}: "${key} {badge} {room} {change}"`).join('\n')}
+  stages:
+    - id: gold
+      title: Gold
+      goal: Get a gold badge.
+      done: [{ player_has: gold }]
+      hints: [Use the runner., Send the key card to the peg and wait.]
+    - id: mend
+      title: Mend
+      goal: Stop the trick.
+      fix:
+        trick: [{ do: write, card: key }, { do: send, spot: peg }, { do: wait }]
+        works_when: [{ player_has: gold }]
+        changes:
+          paint: { text: Paint the vault door., set: {} }
+          strip: { text: Take the runner's badge., set: { courier: { badge: null } } }
+beats:
+  - say: { who: guide, text: To the board. }
+  - puzzle: { stage: gold }
+  - say: { who: guide, text: Now mend it. }
+  - puzzle: { stage: mend, who: guide }
+  - prompt: { goal: Look around., run: ls, explain: ls lists files. }
+objectives:
+  - { id: got-gold, text: Get a gold badge, when: { solved: gold } }
+  - { id: mended, text: Stop the trick, when: { solved: mend } }
+debrief: cards/second.yaml
+`,
+}
+
+/** The test game with the board level as its second level. */
+export function boardSource(overrides: Record<string, string> = {}): ContentSource {
+  return testSource({ ...BOARD_FILES, ...overrides })
 }
 
 /** A content source over the test files, optionally with some replaced or added. */

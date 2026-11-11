@@ -1,3 +1,5 @@
+import { playMove, stageMoves, startStage, type StagePlay } from '../board/board.ts'
+import type { Move, Stage } from '../board/schema.ts'
 import type { ShellEnv } from '../shell/exec.ts'
 import { Shell, type CommandRecord } from '../shell/session.ts'
 import type { ProgramRegistry } from '../shell/types.ts'
@@ -18,8 +20,23 @@ export type LevelEvent =
   | { type: 'command'; line: string }
   | { type: 'continue' }
   | { type: 'answer'; entry: string; answer: Answer }
+  | { type: 'move'; move: Move }
 
 export type Phase = 'brief' | 'play' | 'debrief'
+
+/** The stage of the board puzzle the player reached most recently. */
+export interface PuzzleView {
+  /** The puzzle's title, and what it calls one stage. */
+  title: string
+  step: string
+  stage: Stage
+  /** Which stage this is, counting from one, and how many there are. */
+  number: number
+  of: number
+  play: StagePlay
+  /** The moves open right now. Empty unless this stage is the current beat. */
+  moves: Move[]
+}
 
 export interface LogbookEntryState {
   entry: LogbookEntry
@@ -43,6 +60,8 @@ export interface LevelState {
   logbook: LogbookEntryState[]
   /** What has been delivered to the printout tray so far. */
   tray: TrayItem[]
+  /** The board puzzle as it stands, once the level has reached it. */
+  puzzle: PuzzleView | null
   complete: boolean
 }
 
@@ -100,6 +119,9 @@ export class LevelSession implements TerminalBackend {
   private readonly met = new Map<string, number>()
   private readonly answers = new Map<string, { answer: Answer; grade: Grade }>()
   private readonly delivered: TrayItem[] = []
+  /** Puzzle stages reached so far, by id, and the one reached last. */
+  private readonly stages = new Map<string, StagePlay>()
+  private latestStage: string | null = null
   private state: LevelState
 
   constructor(options: LevelSessionOptions) {
@@ -200,11 +222,27 @@ export class LevelSession implements TerminalBackend {
     return result
   }
 
+  /** Make a move on the board puzzle. Moves that are not possible are ignored. */
+  move(move: Move): void {
+    if (this.phase !== 'play') return
+    const beat = this.currentBeat()
+    const puzzle = this.loaded.level.puzzle
+    if (!beat || !('puzzle' in beat) || !puzzle) return
+    const before = this.stages.get(beat.puzzle.stage)
+    if (!before) return
+    const after = playMove(puzzle, before, move)
+    if (after === before) return
+    this.events.push({ type: 'move', move })
+    this.stages.set(beat.puzzle.stage, after)
+    this.settle()
+  }
+
   /** Play back one recorded event. */
   apply(event: LevelEvent): void {
     if (event.type === 'begin') this.begin()
     else if (event.type === 'command') this.run(event.line)
     else if (event.type === 'continue') this.continue()
+    else if (event.type === 'move') this.move(event.move)
     else this.answer(event.entry, event.answer)
   }
 
@@ -231,7 +269,10 @@ export class LevelSession implements TerminalBackend {
   private context(from: number): PredicateContext {
     const logged = new Set<string>()
     for (const [id, { grade: g }] of this.answers) if (g.correct) logged.add(id)
+    const solved = new Set<string>()
+    for (const [id, play] of this.stages) if (play.solved) solved.add(id)
     return {
+      solved,
       world: this.world,
       shells: this.shells,
       currentHost: this.host,
@@ -260,6 +301,13 @@ export class LevelSession implements TerminalBackend {
     } else if ('connect' in beat) {
       this.login(beat.connect.host, beat.connect.user ?? this.loaded.level.user)
       this.host = beat.connect.host
+    } else if ('puzzle' in beat) {
+      const puzzle = this.loaded.level.puzzle
+      if (!puzzle) throw new Error(`${this.loaded.level.id}: a puzzle beat, but the level has no puzzle`)
+      if (!this.stages.has(beat.puzzle.stage)) {
+        this.stages.set(beat.puzzle.stage, startStage(puzzle, beat.puzzle.stage))
+      }
+      this.latestStage = beat.puzzle.stage
     }
   }
 
@@ -271,6 +319,7 @@ export class LevelSession implements TerminalBackend {
       return true
     }
     if ('log' in beat) return this.answers.get(beat.log.entry)?.grade.correct === true
+    if ('puzzle' in beat) return this.stages.get(beat.puzzle.stage)?.solved === true
     if ('prompt' in beat) {
       const done: Predicate = beat.prompt.done ?? { command_ran: programsIn(beat.prompt.run) }
       return holds(done, this.context(this.beatFrom))
@@ -316,9 +365,28 @@ export class LevelSession implements TerminalBackend {
     for (const listener of this.listeners) listener()
   }
 
+  private puzzleView(): PuzzleView | null {
+    const puzzle = this.loaded.level.puzzle
+    const play = this.latestStage === null ? undefined : this.stages.get(this.latestStage)
+    if (!puzzle || !play) return null
+    const index = puzzle.stages.findIndex((s) => s.id === play.stage)
+    const beat = this.phase === 'play' ? this.currentBeat() : null
+    const current = beat !== null && 'puzzle' in beat && beat.puzzle.stage === play.stage
+    return {
+      title: puzzle.title,
+      step: puzzle.step,
+      stage: puzzle.stages[index]!,
+      number: index + 1,
+      of: puzzle.stages.length,
+      play,
+      moves: current ? stageMoves(puzzle, play) : [],
+    }
+  }
+
   private buildState(): LevelState {
     const { objectives, logbook } = this.loaded.level
     return {
+      puzzle: this.puzzleView(),
       phase: this.phase,
       host: this.host,
       beatIndex: this.beatIndex,

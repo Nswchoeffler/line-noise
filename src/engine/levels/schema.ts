@@ -3,6 +3,7 @@
 // any particular level.
 
 import { z } from 'zod'
+import { PuzzleSchema } from '../board/schema.ts'
 import { OverlaySpecSchema, TimeSchema } from '../world/spec.ts'
 
 // ---- predicates -------------------------------------------------------------
@@ -56,6 +57,8 @@ export interface Predicate {
   logged?: string | undefined
   /** Another objective has been met. */
   met?: string | undefined
+  /** A stage of the level's board puzzle has been cleared. */
+  solved?: string | undefined
 
   // Combining.
   all?: Predicate[] | undefined
@@ -94,6 +97,7 @@ export const PredicateSchema: z.ZodType<Predicate> = z.lazy(() =>
       after: z.string().optional(),
       logged: z.string().optional(),
       met: z.string().optional(),
+      solved: z.string().optional(),
       all: z.array(PredicateSchema).min(1).optional(),
       any: z.array(PredicateSchema).min(1).optional(),
       not: PredicateSchema.optional(),
@@ -156,7 +160,23 @@ const ConnectBeat = z.strictObject({
   connect: z.strictObject({ host: z.string(), user: z.string().optional() }),
 })
 
-export const BeatSchema = z.union([SayBeat, PromptBeat, LogBeat, AdvanceBeat, DeliverBeat, ConnectBeat])
+/**
+ * The player works one stage of the level's board puzzle. The board takes the
+ * terminal's place until the stage is cleared, however many moves that takes.
+ */
+const PuzzleBeat = z.strictObject({
+  puzzle: z.strictObject({ stage: z.string(), who: z.string().optional() }),
+})
+
+export const BeatSchema = z.union([
+  SayBeat,
+  PromptBeat,
+  LogBeat,
+  AdvanceBeat,
+  DeliverBeat,
+  ConnectBeat,
+  PuzzleBeat,
+])
 
 // ---- objectives -------------------------------------------------------------
 
@@ -290,6 +310,8 @@ export const LevelSchema = z
     brief: z.string(),
     /** Items available to the printout tray, delivered by `deliver` beats. */
     tray: z.array(TrayItemSchema).default([]),
+    /** A board puzzle, worked a stage at a time by `puzzle` beats. */
+    puzzle: PuzzleSchema.optional(),
     beats: z.array(BeatSchema).default([]),
     objectives: z.array(ObjectiveSchema).default([]),
     logbook: z.array(LogbookEntrySchema).default([]),
@@ -328,6 +350,19 @@ export const LevelSchema = z
         if (entry.correct.length !== entry.choose) {
           fail(`logbook ${entry.id}: asks for ${entry.choose} but ${entry.correct.length} are correct`)
         }
+      }
+    }
+
+    const stageIds = level.puzzle?.stages.map((s) => s.id) ?? []
+    const played = level.beats.flatMap((beat) => ('puzzle' in beat ? [beat.puzzle.stage] : []))
+    for (const id of played) {
+      if (!stageIds.includes(id)) fail(`a beat plays puzzle stage "${id}", which does not exist`)
+    }
+    for (const id of duplicates(played)) fail(`puzzle stage played twice: ${id}`)
+    for (const objective of level.objectives) {
+      const stage = objective.when.solved
+      if (stage !== undefined && !played.includes(stage)) {
+        fail(`objective ${objective.id} waits for puzzle stage "${stage}", which no beat plays`)
       }
     }
 

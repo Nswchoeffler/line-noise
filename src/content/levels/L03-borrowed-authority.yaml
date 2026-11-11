@@ -1,0 +1,524 @@
+# Level 3: Borrowed Authority
+#
+# The intruder came back in the night and turned an ordinary account into
+# root. The player works out how at a whiteboard, as a puzzle: a building
+# with badge-locked doors, a courier who carries cards on a loaned badge, and
+# a night watchman who does whatever the card on his hook says. Then the
+# player changes sides and closes the hole.
+#
+# Only after that do the real names appear: the printout of the session, and
+# two look-only commands at the terminal. The trick itself is never typed.
+#
+# The puzzle has no right-answer flags. A door opens for a badge it is set to
+# open for; the trick works on the building as drawn and fails on the building
+# as changed, because of those rules.
+
+id: L03-borrowed-authority
+number: 3
+title: Borrowed Authority
+mode: guided
+host: granite
+user: ops
+
+setup:
+  # The next morning.
+  time: "1986-09-03 08:20"
+  overlays:
+    granite:
+      files:
+        # The mail helper that came with the Scribe editor. Owned by root,
+        # with the setuid bit: it runs as root whoever starts it. In the game
+        # it does nothing but print how it is used.
+        - path: /usr/local/bin/mvmail
+          mode: "4711"
+          mtime: "1985-03-04 10:12"
+          content: |
+            echo "usage: mvmail inbox-file destination"
+        # The job runner, started by the system every few minutes as root.
+        # The intruder put the original back at 02:27, which is what its
+        # modified time now shows.
+        - path: /usr/lib/atrun
+          mode: "755"
+          mtime: "1986-09-03 02:27"
+          content: |
+            echo "atrun: nothing to run"
+      logins:
+        # The player's afternoon at the terminal, in Level 2.
+        - { user: ops, tty: ttyh4, login: "1986-09-02 13:10", logout: "1986-09-02 17:20" }
+        # Last night.
+        - { user: hollis, tty: ttyn1, from: shale, login: "1986-09-03 02:11", logout: "1986-09-03 02:36" }
+
+brief: |
+  Wednesday 3 September 1986. Marge wired a printer to the network line last
+  night and went home.
+
+  This morning there are four feet of paper on the floor behind it. Somebody
+  called in at eleven minutes past two and logged in as `hollis`. By half past
+  two they were working as `root`: the administrator, the one account that may
+  do anything.
+
+  An ordinary account cannot turn itself into root. This one did. Today you
+  find out how, without changing anything on `granite`.
+
+tray:
+  - id: session
+    title: Line monitor, ttyn1, 3 September
+    kind: printout
+    text: |
+      CALDER RIDGE LABORATORY   LINE MONITOR   ttyn1
+      Wed Sep  3 1986   (every key in, every character out)
+
+      02:11  login: hollis
+      02:11  Password:
+      02:11  Last login: Mon Sep  1 02:47 on ttyn1 from shale
+      02:13  granite$ ls -l /usr/local/bin/mvmail
+      02:13  -rws--x--x  1 root     wheel         44 Mar  4  1985 /usr/local/bin/mvmail
+      02:14  granite$ ls -l /usr/lib/atrun
+      02:14  -rwxr-xr-x  1 root     wheel         29 Nov 12  1984 /usr/lib/atrun
+      02:15  granite$ cp /usr/lib/atrun /tmp/.keep
+      02:16  granite$ scribe /tmp/note
+      02:18  [full-screen editor: not captured. 2 lines saved.]
+      02:19  granite$ mvmail /tmp/note /usr/lib/atrun
+      02:19  granite$ date
+      02:19  Wed Sep  3 02:19:41 PDT 1986
+      02:25  granite$ date
+      02:25  Wed Sep  3 02:25:07 PDT 1986
+      02:25  granite$ /tmp/.door
+      02:25  granite# whoami
+      02:25  root
+      02:27  granite# cp /tmp/.keep /usr/lib/atrun
+      02:28  granite# rm /tmp/.keep /tmp/.door /tmp/note
+      02:36  granite# logout
+
+# ---- the whiteboard ---------------------------------------------------------------
+#
+# What each piece stands for:
+#
+#   a door and its badge reader     a file's permissions
+#   the STAFF badge                 an ordinary account (hollis)
+#   the MASTER badge                root
+#   Dot, and her loaned badge       mvmail, and its setuid bit
+#   "any spot you name"             mvmail does not check the destination
+#   Walt and the round hook         the system running atrun as root on a timer
+#   the "put there" time            a file's modified time
+
+puzzle:
+  title: The building at night
+  step: Hoop
+
+  board:
+    start: "02:00"
+    badges:
+      staff: STAFF
+      master: MASTER
+    rooms:
+      lobby: { name: Lobby, opens_for: [staff, master] }
+      office: { name: Office, opens_for: [staff, master] }
+      control: { name: Control Room, opens_for: [master] }
+    spots:
+      notice: { name: noticeboard, room: lobby }
+      duty: { name: duty board, room: control }
+      hook: { name: round hook, room: control, holds: boilers, changed: last March }
+    cards:
+      hello: { text: Hello from the Lobby. }
+      boilers: { text: Check the boilers. }
+      badge:
+        text: Give a MASTER badge to whoever is waiting in the Lobby.
+        grants: { badge: master, in: lobby }
+    player: { room: lobby, badges: [staff] }
+    courier:
+      name: Dot
+      about: Internal mail. She takes a card to any spot you name.
+      room: lobby
+      badge: master
+    round:
+      name: Walt
+      about: Night watchman. He does whatever the card on the round hook says.
+      badge: master
+      every: 5
+      reads: hook
+    lines:
+      you_enter: "You hold your {badge} badge to the reader on the {room} door. Green light. You walk in."
+      you_refused: "You hold your {badge} badge to the reader on the {room} door. Red light. The door stays shut."
+      you_write: "You write a card: “{card}”"
+      you_place: "You pin your card on the {spot}."
+      you_replace: "You take “{old}” off the {spot} and pin your card there instead."
+      you_hand: "You hand your card to {courier}: “For the {spot} in the {room}, please.”"
+      courier_loaned: "{courier} does not ask who you are. Her badge reads {badge}: the building lends it to her, so that the mail always gets through."
+      courier_senders: "{courier} has no badge of her own now, so she takes yours along: {badge}."
+      courier_declines: "{courier} looks at your badge first. “{badge} does not open the {room}. I only take a card where its sender could have walked.” You get your card back."
+      courier_enters: "The reader on the {room} door sees {badge}. Green light. {courier} walks in."
+      courier_refused: "The reader on the {room} door sees {badge}. Red light. {courier} brings your card back."
+      courier_delivers: "{courier} pins your card on the {spot}."
+      courier_replaces: "{courier} takes “{old}” off the {spot} and pins your card there instead."
+      round_reads: "{time}. {round} makes his round and reads the card on the {spot}: “{card}”"
+      round_empty: "{time}. {round} makes his round. The {spot} is empty, so there is nothing to do."
+      round_refused: "{time}. {round} cannot get into the {room}, and gives up on the round."
+      round_does: "{round} does what the card says, as he always does. Nothing changes for you."
+      round_grants: "{round} does what the card says, as he always does. He hands you a {badge} badge."
+      round_misses: "{round} does what the card says, but nobody is waiting in the {room}. The {badge} badge goes back in his pocket."
+      fix_change: "CHANGE: {change}"
+      fix_try: "The same trick is tried again, move for move."
+      fix_worked: "RESULT: the trick still works. That change did not close the hole."
+      fix_held: "RESULT: the trick fails. The hole is closed."
+
+  stages:
+    # Hoop 1: a door is a permission check, and a badge is who you are.
+    - id: doors
+      title: Doors
+      goal: |
+        You are in the Lobby with a STAFF badge. What you want is in the
+        Control Room. Try its door. Try the Office too, if you like.
+      with:
+        courier: null
+        round: null
+        spots: { notice: null, duty: null, hook: null }
+      done:
+        - { turned_away: control }
+      hints:
+        - Under "Go to" there is a button for each room. Press the one for the Control Room.
+
+    # Hoop 2: a helper with a loaned badge goes where the sender cannot.
+    - id: courier
+      title: The courier
+      goal: |
+        Dot runs the internal mail. Get a card of yours onto the duty board
+        inside the Control Room, without a MASTER badge.
+      with:
+        round: null
+        spots: { hook: null }
+        cards: { boilers: null, badge: null }
+      done:
+        - { spot_holds: { spot: duty, card: hello } }
+      hints:
+        - You cannot carry a card in there yourself. Who else is in the Lobby, and what badge is she wearing?
+        - Write a card. Then, while you are in the Lobby, hand it to Dot and name the duty board.
+
+    # Hoop 3: something with full authority follows a card without thinking.
+    - id: round
+      title: The night round
+      goal: |
+        Walt, the night watchman, makes a round every five minutes. Get a
+        MASTER badge of your own.
+      done:
+        - { player_has: master }
+      hints:
+        - Walt wears a MASTER badge, and he does whatever one particular card says. Which spot does he read?
+        - You cannot reach the round hook. Dot can.
+        - Write the card about the MASTER badge, hand it to Dot for the round hook, stay in the Lobby, and wait for the next round.
+
+    # Hoop 4: putting things back, and the one thing that does not go back.
+    - id: tidy
+      title: As you found it
+      goal: |
+        You have your badge. But in the morning somebody will read that hook.
+        Put it back the way it was: "Check the boilers."
+      with:
+        start: "02:05"
+        player: { badges: [staff, master] }
+        spots: { hook: { holds: badge, changed: "02:00" } }
+      done:
+        - { spot_holds: { spot: hook, card: boilers } }
+      hints:
+        - Write the card the hook used to hold.
+        - Your new badge opens the Control Room, so you can pin the card up yourself. Dot would take it for you too.
+
+    # Hoop 5: the other chair. Pick a change; the rules decide whether it works.
+    - id: close
+      title: Close the hole
+      goal: |
+        Change chairs: you run this building now. Make one change, and the
+        same trick will be tried again. Find a change that stops it.
+      fix:
+        trick:
+          - { do: write, card: badge }
+          - { do: send, spot: hook }
+          - { do: wait }
+        works_when:
+          - { player_has: master }
+        changes:
+          lock:
+            text: Fit a heavier lock on the Control Room door.
+            # Nothing about the rules changes. The door still opens for MASTER
+            # badges and only for them, which is all it ever did.
+            set: {}
+          slower:
+            text: Have Walt make his round every 10 minutes, not every 5.
+            set:
+              round: { every: 10 }
+          unbadge:
+            text: Take Dot's loaned badge away. She uses the sender's badge instead.
+            set:
+              courier:
+                badge: null
+                about: Internal mail. She carries each card on its sender's badge.
+          ask:
+            text: Dot keeps her badge, but first checks that the sender could have walked there.
+            set:
+              courier:
+                asks: true
+                about: Internal mail. She first checks that the sender could have gone there.
+      hints:
+        - Of each change, ask one thing. When the card arrives at the Control Room, whose badge does the door see?
+        - The lock was never beaten, and the clock only makes him wait. The trouble is whose authority carries the card.
+
+beats:
+  - say:
+      who: Marge
+      text: |
+        He came back. Eleven minutes past two this morning, through the
+        gateway, as `hollis`. The printer caught every key he pressed, and a
+        quarter of an hour later it was printing root's prompt.
+
+        I have the paper, and you will get it. But this trick is easier to
+        see as a building than as a computer. So first, the whiteboard.
+
+        You play him. He walks in wearing an ordinary STAFF badge, and what
+        he wants is behind a door that opens only for MASTER.
+
+  - puzzle: { stage: doors, who: Marge }
+
+  - say:
+      who: Marge
+      text: |
+        That is all a file permission is: a door that reads your badge. Your
+        account is the badge. `hollis` is a STAFF badge, and the files that
+        run this lab open only for MASTER. On `granite`, MASTER is called
+        `root`.
+
+        So he could not walk in. Nobody had to be clever to stop him. The
+        door just did its job.
+
+        Now meet Dot.
+
+  - puzzle: { stage: courier, who: Marge }
+
+  - say:
+      who: Marge
+      text: |
+        Look at what the door did. It read a badge, saw MASTER, and opened.
+        It has no way of knowing that the card was yours.
+
+        Dot is no villain. She was lent that badge for a good reason: so that
+        the mail gets through. But she will take anything, anywhere, for
+        anybody. Her authority is borrowed, and you have just borrowed it
+        from her.
+
+        A card on a board is only a card, though. Somebody with authority has
+        to act on it. Meet Walt.
+
+  - puzzle: { stage: round, who: Marge }
+
+  - say:
+      who: Marge
+      text: |
+        There it is. You never touched the Control Room door. Dot carried
+        your card past it on a borrowed badge, and Walt, who does what the
+        hook says without a thought, did the rest himself.
+
+        Three things had to be true at once, and each is harmless alone. A
+        courier with a MASTER badge. A courier who never asks whether the
+        sender could have gone there. And a watchman who follows whatever is
+        on the hook. Remember them: your logbook will ask.
+
+        One thing is left. In the morning, somebody will read that hook.
+
+  - puzzle: { stage: tidy, who: Marge }
+
+  - say:
+      who: Marge
+      text: |
+        Back as it was, which is why I saw nothing wrong all week.
+
+        But read the hook. It says when the card was put there, and that is
+        now the middle of last night. He can put the card back. He cannot
+        put the time back, unless he thinks of it. It is the usage log all
+        over again.
+
+        Now change chairs. This is your building. Close the hole.
+
+  - puzzle: { stage: close, who: Marge }
+
+  - say:
+      who: Marge
+      text: |
+        Closed.
+
+        Two of those changes work, and they are the same idea from two ends.
+        Either Dot stops carrying more authority than the sender has, or she
+        checks before she uses it. Give a thing no more authority than its
+        job needs: people call that least privilege.
+
+        The heavier lock does nothing, because the lock was never beaten. It
+        opened for a real MASTER badge, exactly as designed. A slower round
+        only makes him wait.
+
+  - deliver: { item: session }
+
+  - say:
+      who: Marge
+      text: |
+        Now the paper. It is in your printout tray, on the right: last
+        night's session, as the printer caught it.
+
+        Read it through and find Dot and Walt in it. Then come back, and we
+        will look at the real ones.
+
+  # ---- the real names ----
+
+  - prompt:
+      who: Marge
+      goal: |
+        `mvmail` is a small helper that came with the Scribe editor. Its job
+        is to move a person's new mail into their own files. Look at it.
+      run: ls -l /usr/local/bin/mvmail
+      explain: |
+        A long listing of one file. Read the permissions in the first column
+        one letter at a time.
+      result: |
+        The owner is `root`. Now the owner's three letters: `rws`. Where the
+        `x` should be there is an `s`. That `s` is Dot's loaned badge. It
+        means that whoever starts this program, it runs with the authority of
+        its owner. Its name is the setuid bit.
+      done: { output_matches: "^-rws.*mvmail" }
+
+  - prompt:
+      who: Marge
+      goal: |
+        And Walt's hook. Every few minutes the computer itself runs a
+        program called `atrun`, with root's authority, to start the jobs
+        people have left for later.
+      run: ls -l /usr/lib/atrun
+      explain: |
+        Another long listing. Look at the owner, at who has a `w`, and at
+        the time.
+      result: |
+        Owned by `root`, and only the owner has a `w`: no other account may
+        change this file. That is the Control Room door, and it was never
+        broken. `mvmail` carried his file past it.
+
+        Now the time: 3 September, 02:27. The printout shows him putting the
+        original back at 02:27. The card is back on the hook, and the time
+        gives him away.
+      done: { output_matches: "Sep\\s+3 02:27.*atrun" }
+
+  # ---- the logbook ----
+
+  - log:
+      entry: pieces
+      who: Marge
+      text: |
+        Write it down while the building is still in your head. First, who
+        is who. Both names are in the printout: the command he used to move
+        his note, and where he moved it to.
+
+  - log:
+      entry: bit
+      who: Marge
+      text: |
+        Next, the badge. It is in the listing of `mvmail`, on the screen
+        below.
+
+  - log:
+      entry: conditions
+      who: Marge
+      text: Now the three things that had to be true together.
+
+  - log:
+      entry: proof
+      who: Marge
+      text: |
+        The proof is on paper this time. Choose "Pin a line", open the
+        Printout tray, and pick the line where he hands his card to Dot.
+
+  - log:
+      entry: fix
+      who: Marge
+      text: And the fix, in your own words. One sentence is plenty.
+
+  - say:
+      who: Marge
+      text: |
+        Good. The command for that is `chmod u-s /usr/local/bin/mvmail`: take
+        the `s` away from the owner. One line, and on any other day I would
+        have typed it already.
+
+        Not today. The moment that door stops opening, he knows we have seen
+        him. He goes away, and he comes back somewhere I am not watching.
+        Today I know where he comes in, and when, and what he reaches for.
+
+        So the hole stays open on `granite`, with a printer on the line. And
+        from now on, you and I do not discuss him over the computer's mail.
+
+        I do not like it either. We will come back to it.
+
+objectives:
+  - id: trick
+    text: Work out the trick at the whiteboard
+    when: { solved: round }
+  - id: closed
+    text: Close the hole in the building
+    when: { solved: close }
+  - id: saw-bit
+    text: Find the borrowed badge on the real program
+    when: { output_matches: "^-rws.*mvmail" }
+  - id: saw-time
+    text: Find when the job file was last changed
+    when: { output_matches: "Sep\\s+3 02:27.*atrun" }
+
+logbook:
+  - id: pieces
+    fill: "On granite, Dot the courier is the program {courier}. Walt's round hook is the program {hook}, which the computer runs by itself every few minutes."
+    blanks:
+      courier:
+        accept: [mvmail, /usr/local/bin/mvmail]
+        label: program name
+        hint: In the printout, the command he typed at 02:19 to move his note. Just its name.
+        width: 10
+      hook:
+        accept: [atrun, /usr/lib/atrun]
+        label: program name
+        hint: In the printout, the place his note was moved to at 02:19. The last part of that path.
+        width: 10
+
+  - id: bit
+    fill: "Dot's loaned badge is the letter {letter} in the listing of mvmail, where an x would usually be. It makes the program run with the authority of its owner, the account {owner}."
+    blanks:
+      letter:
+        accept: [s]
+        label: one letter
+        hint: The first column of what `ls -l /usr/local/bin/mvmail` printed. Count to the fourth character.
+        width: 3
+      owner:
+        accept: [root]
+        label: account name
+        hint: In that same listing, the owner is the name right after the 1.
+        width: 8
+
+  - id: conditions
+    ask: Which three things had to be true together for the trick to work?
+    choose: 3
+    options:
+      - { id: knew-password, text: The intruder knew root's password. }
+      - { id: runs-as-root, text: "The mail helper runs with root's authority, whoever starts it." }
+      - { id: open-file, text: Any account was allowed to change the job file. }
+      - { id: no-check, text: "The mail helper puts a file wherever it is told, without asking whether that person could have put it there." }
+      - { id: admin-account, text: The account hollis was an administrator's account. }
+      - { id: system-runs, text: "The computer itself runs the job file every few minutes, with root's authority." }
+    correct: [runs-as-root, no-check, system-runs]
+    hint: Think of the building. Nobody told him a password, the Control Room door was never left open, and his badge said STAFF.
+
+  - id: proof
+    ask: Pin the line of the printout where he hands his card to Dot.
+    pin: { matches: "mvmail\\s+\\S+\\s+/usr/lib/atrun" }
+    hint: Open the Printout tray. It is the command that names both the mail helper and the job file.
+
+  - id: fix
+    ask: "In one sentence: what would you change on granite so that this trick stops working?"
+    write:
+      mentions:
+        - [setuid, set-uid, set uid, s bit, u-s, badge, authority, privilege, permission, check]
+        - [mvmail, mail helper, helper, courier, dot]
+    hint: Say which program you would change, and what you would take away from it. In the building it was Dot and her badge.
+
+debrief: cards/borrowed-authority.yaml

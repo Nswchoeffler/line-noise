@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react'
 import type { Answer, Grade } from '../engine/levels/logbook.ts'
-import type { TrayItem } from '../engine/levels/schema.ts'
+import type { Beat, TrayItem } from '../engine/levels/schema.ts'
 import { formatDate } from '../engine/world/time.ts'
 import { Binder } from './Binder.tsx'
+import { Board } from './Board.tsx'
 import type { Game, GameState } from './game.ts'
 import { Guidance } from './Guidance.tsx'
 import { Logbook } from './Logbook.tsx'
@@ -19,6 +20,20 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'binder', label: 'Binder' },
 ]
 
+/**
+ * Whether the puzzle board is what the player should be looking at: during a
+ * puzzle stage, and while it is being talked over or written up afterwards.
+ * The next command to type brings the terminal back.
+ */
+function boardInView(beats: readonly Beat[], beatIndex: number): boolean {
+  for (let i = Math.min(beatIndex, beats.length - 1); i >= 0; i--) {
+    const beat = beats[i]!
+    if ('puzzle' in beat) return true
+    if ('prompt' in beat || 'connect' in beat || 'advance' in beat) return false
+  }
+  return false
+}
+
 /** One level at the desk. Remounted for each new level, so its state starts clean. */
 function LevelDesk({ game, gameState }: { game: Game; gameState: GameState }) {
   const { session, terminal, loaded } = gameState
@@ -30,7 +45,13 @@ function LevelDesk({ game, gameState }: { game: Game; gameState: GameState }) {
   const [seenTray, setSeenTray] = useState(0)
   const tabRefs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({})
 
-  const focusTerminal = (): void => document.getElementById('terminal-input')?.focus()
+  const showBoard = level.puzzle !== null && boardInView(loaded.level.beats, level.beatIndex)
+  const focusBoard = (): void => {
+    const first = document.querySelector<HTMLElement>('#board button:not(:disabled)')
+    ;(first ?? document.querySelector<HTMLElement>('#board [role="log"]'))?.focus()
+  }
+  /** The left of the desk is the terminal, or the board while a puzzle is on it. */
+  const focusTerminal = (): void => (showBoard ? focusBoard() : document.getElementById('terminal-input')?.focus())
 
   function showTab(next: Tab, focus = false): void {
     setTab(next)
@@ -50,20 +71,27 @@ function LevelDesk({ game, gameState }: { game: Game; gameState: GameState }) {
     if (logEntry !== null) setTab('logbook')
   }
 
-  useEffect(() => {
+  // A layout effect, so that focus has moved by the time the key press or
+  // click that advanced the level has finished. Moving it a frame later left
+  // a gap in which the next key could land on whatever had focus before.
+  useLayoutEffect(() => {
     if (level.phase !== 'play') return
     if (beatKind === 'say' || beatKind === 'advance') {
       document.getElementById('guidance-continue')?.focus()
     } else if (beatKind === 'prompt') {
       document.getElementById('terminal-input')?.focus()
+    } else if (beatKind === 'puzzle') {
+      document.querySelector<HTMLElement>('#board button:not(:disabled)')?.focus()
     } else if (beatKind === 'none') {
       // The script has run out: what remains is in the logbook.
       document.getElementById('guidance-logbook')?.focus()
     } else if (logEntry !== null) {
-      // Wait for the logbook to be on screen before focusing into it.
-      requestAnimationFrame(() => {
-        document.querySelector<HTMLElement>(`#entry-${logEntry} input, #entry-${logEntry} button`)?.focus()
-      })
+      // The logbook was brought to the front in this same render, so the entry is there.
+      document
+        .querySelector<HTMLElement>(
+          `#entry-${logEntry} input, #entry-${logEntry} textarea, #entry-${logEntry} button:not(:disabled)`,
+        )
+        ?.focus()
     }
     // Keyed on the beat alone: this must not run on every command.
   }, [level.beatIndex, level.phase, beatKind, logEntry])
@@ -133,23 +161,31 @@ function LevelDesk({ game, gameState }: { game: Game; gameState: GameState }) {
           onContinue={() => session.continue()}
           onOpenLogbook={() => showTab('logbook', true)}
         />
-        <div className="desk-terminal">
-          <Terminal
-            model={terminal}
-            pinned={pinned}
-            picking={picking !== null}
-            onPick={(line: TermLine) => pick(line.text, 'terminal')}
-            onCancelPick={() => picking !== null && endPick(picking)}
-            onLeave={() => tabRefs.current[tab]?.focus()}
-          />
-        </div>
-        <p className="status-line">
-          <span>
-            <span className="visually-hidden">You are </span>
-            {shell.user}@{shell.host.name}:{shell.cwd}
-          </span>
-          <span>{formatDate(shell.host.clock.now, shell.host.timezone)}</span>
-        </p>
+        {showBoard && level.puzzle ? (
+          <div className="desk-terminal desk-board">
+            <Board view={level.puzzle} onMove={(move) => session.move(move)} />
+          </div>
+        ) : (
+          <>
+            <div className="desk-terminal">
+              <Terminal
+                model={terminal}
+                pinned={pinned}
+                picking={picking !== null}
+                onPick={(line: TermLine) => pick(line.text, 'terminal')}
+                onCancelPick={() => picking !== null && endPick(picking)}
+                onLeave={() => tabRefs.current[tab]?.focus()}
+              />
+            </div>
+            <p className="status-line">
+              <span>
+                <span className="visually-hidden">You are </span>
+                {shell.user}@{shell.host.name}:{shell.cwd}
+              </span>
+              <span>{formatDate(shell.host.clock.now, shell.host.timezone)}</span>
+            </p>
+          </>
+        )}
       </div>
 
       <div className="desk-right">
