@@ -11,6 +11,7 @@ export interface BoardProps {
 /** A stable name for a move, so its button keeps its identity from one turn to the next. */
 function moveId(move: Move): string {
   if (move.do === 'go') return `go-${move.room}`
+  if (move.do === 'read') return `read-${move.spot}`
   if (move.do === 'write') return `write-${move.card}`
   if (move.do === 'place') return `place-${move.spot}`
   if (move.do === 'send') return `send-${move.spot}`
@@ -31,6 +32,7 @@ type MoveOf<K extends Move['do']> = Extract<Move, { do: K }>
 export function Board({ view, onMove }: BoardProps) {
   const { stage, play, moves } = view
   const { board, state } = play
+  const { courier, round } = board
   const boardRef = useRef<HTMLElement>(null)
   const logRef = useRef<HTMLOListElement>(null)
   /** Whether the keyboard was on the board when the last move was made. */
@@ -74,6 +76,7 @@ export function Board({ view, onMove }: BoardProps) {
   const of = <K extends Move['do']>(kind: K): MoveOf<K>[] =>
     moves.filter((m): m is MoveOf<K> => m.do === kind)
   const go = of('go')
+  const read = of('read')
   const write = of('write')
   const place = of('place')
   const send = of('send')
@@ -81,7 +84,6 @@ export function Board({ view, onMove }: BoardProps) {
   const fix = of('fix')
   const reset = of('reset')
 
-  const { courier, round } = board
   const roundSpot = round ? board.spots[round.reads] : undefined
   const tried = (change: string): { held: boolean } | undefined => play.tried.find((t) => t.change === change)
 
@@ -98,7 +100,8 @@ export function Board({ view, onMove }: BoardProps) {
             </strong>
           )}
         </p>
-        <p className="board-clock">Clock {clockText(state.clock)}</p>
+        {/* The clock matters only on a board where something happens on a timer. */}
+        {round && <p className="board-clock">Clock {clockText(state.clock)}</p>}
       </header>
 
       <ul className="board-rooms" aria-label="Rooms">
@@ -139,10 +142,14 @@ export function Board({ view, onMove }: BoardProps) {
 
               {spots.map(([spotId, spot]) => {
                 const on = state.spots[spotId]
+                // What is on a covered spot is not known until the player has looked.
+                const unread = spot.covered && !state.seen.includes(spotId)
                 return (
-                  <p key={spotId} className="board-spot">
+                  <p key={spotId} className={unread ? 'board-spot board-spot-covered' : 'board-spot'}>
                     <strong>{spot.name}:</strong>{' '}
-                    {on?.card == null ? (
+                    {unread ? (
+                      'not looked at yet'
+                    ) : on?.card == null ? (
                       'empty'
                     ) : (
                       <>
@@ -182,6 +189,12 @@ export function Board({ view, onMove }: BoardProps) {
               <p role="group" aria-label="Go to a room">
                 <span className="board-moves-label">Go to:</span>{' '}
                 {go.map((move) => button(move, roomName(move.room)))}
+              </p>
+            )}
+            {read.length > 0 && (
+              <p role="group" aria-label="Look at something in this room">
+                <span className="board-moves-label">Look at the:</span>{' '}
+                {read.map((move) => button(move, spotName(move.spot)))}
               </p>
             )}
             {write.length > 0 && (

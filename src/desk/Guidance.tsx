@@ -1,14 +1,18 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import type { LevelState } from '../engine/levels/runner.ts'
-import type { Beat } from '../engine/levels/schema.ts'
+import type { Beat, GuidanceMode } from '../engine/levels/schema.ts'
 import { InlineText, RichText } from './RichText.tsx'
 
 export interface GuidanceProps {
   level: LevelState
   /** Every beat of the level, so the last finished step can be recalled. */
   beats: readonly Beat[]
+  /** How much help the level gives: every command, or a goal with hints on request. */
+  mode: GuidanceMode
   onContinue: () => void
   onOpenLogbook: () => void
+  /** Put the keyboard back on the terminal, or on the board while a puzzle is on it. */
+  onReturn: () => void
 }
 
 /** The most recent command step the player has finished, if it explains its output. */
@@ -29,21 +33,88 @@ function lastResult(beats: readonly Beat[], beatIndex: number): { run: string; r
  * guidance until the next command is done, so the player can read it while
  * the output is still on the screen below.
  */
-function Recap({ run, result }: { run: string; result: string }) {
+function Recap({ run, result, guided }: { run: string; result: string; guided: boolean }) {
   return (
     <section className="guidance-recap" aria-label="What your last command showed">
-      <p className="guidance-label">You ran:</p>
-      <pre className="guidance-recap-command">
-        <code>{run}</code>
-      </pre>
-      <p className="guidance-label">What the output means:</p>
+      {/* Outside a guided level the player chose the command, so it is not quoted back. */}
+      {guided && (
+        <>
+          <p className="guidance-label">You ran:</p>
+          <pre className="guidance-recap-command">
+            <code>{run}</code>
+          </pre>
+        </>
+      )}
+      <p className="guidance-label">{guided ? 'What the output means:' : 'What you just found:'}</p>
       <RichText text={result} />
     </section>
   )
 }
 
+/**
+ * The hint ladder of a scaffolded step: a nudge, then how the command works,
+ * then the command itself. Each is shown only when asked for, and all are free.
+ */
+function Ladder({
+  nudge,
+  approach,
+  command,
+  onLast,
+}: {
+  nudge: string | undefined
+  approach: string
+  command: string
+  /** The last hint has been asked for, and its button is about to go. */
+  onLast: () => void
+}) {
+  const [shown, setShown] = useState(0)
+  const rungs = [
+    ...(nudge === undefined ? [] : [{ label: 'A nudge', text: nudge }]),
+    { label: 'How to do it', text: approach },
+  ]
+  const total = rungs.length + 1
+  return (
+    <div className="guidance-hints">
+      {shown > 0 && (
+        <ol className="guidance-hint-list" role="status">
+          {rungs.slice(0, shown).map((rung) => (
+            <li key={rung.label}>
+              <strong>{rung.label}.</strong> <InlineText text={rung.text} />
+            </li>
+          ))}
+          {shown === total && (
+            <li>
+              <strong id="guidance-command-label">The command.</strong>
+              <pre className="guidance-command" aria-labelledby="guidance-command-label">
+                <code>{command}</code>
+              </pre>
+            </li>
+          )}
+        </ol>
+      )}
+      {shown < total && (
+        <button
+          type="button"
+          className="button button-quiet"
+          onClick={() => {
+            setShown(shown + 1)
+            // The command is the last hint: what comes next is typing it.
+            if (shown + 1 === total) onLast()
+          }}
+        >
+          {shown === 0
+            ? 'Give me a hint'
+            : shown === total - 1
+              ? `Show me the command (hint ${total} of ${total})`
+              : `Another hint (${shown} of ${total} shown)`}
+        </button>
+      )}
+    </div>
+  )
+}
+
 /** Free hints for a puzzle stage, shown one at a time, gentlest first. */
-function Hints({ hints }: { hints: readonly string[] }) {
+function Hints({ hints, onLast }: { hints: readonly string[]; onLast: () => void }) {
   const [shown, setShown] = useState(0)
   if (hints.length === 0) return null
   return (
@@ -58,7 +129,15 @@ function Hints({ hints }: { hints: readonly string[] }) {
         </ol>
       )}
       {shown < hints.length && (
-        <button type="button" className="button button-quiet" onClick={() => setShown(shown + 1)}>
+        <button
+          type="button"
+          className="button button-quiet"
+          onClick={() => {
+            setShown(shown + 1)
+            // The button goes with the last hint. Do not leave the keyboard nowhere.
+            if (shown + 1 === hints.length) onLast()
+          }}
+        >
           {shown === 0 ? 'Give me a hint' : `Another hint (${shown} of ${hints.length} shown)`}
         </button>
       )}
@@ -72,7 +151,8 @@ function Hints({ hints }: { hints: readonly string[] }) {
  * logbook entry to fill in, or a wait. Above it, what the last command's
  * output means.
  */
-export function Guidance({ level, beats, onContinue, onOpenLogbook }: GuidanceProps) {
+export function Guidance({ level, beats, mode, onContinue, onOpenLogbook, onReturn }: GuidanceProps) {
+  const guided = mode === 'guided'
   const beat = level.beat
   const recap = lastResult(beats, level.beatIndex)
 
@@ -127,6 +207,24 @@ export function Guidance({ level, beats, onContinue, onOpenLogbook }: GuidancePr
         </button>
       </>
     )
+  } else if ('prompt' in beat && !guided) {
+    body = (
+      <>
+        <h2 className="guidance-heading">{beat.prompt.who ?? 'Next step'}</h2>
+        <RichText text={beat.prompt.goal} />
+        <p className="guidance-label">
+          Work out the command and type it in the terminal. Any command that finds the answer will do. Hints are
+          free.
+        </p>
+        <Ladder
+          key={level.beatIndex}
+          nudge={beat.prompt.nudge}
+          approach={beat.prompt.explain}
+          command={beat.prompt.run}
+          onLast={onReturn}
+        />
+      </>
+    )
   } else if ('prompt' in beat) {
     body = (
       <>
@@ -162,7 +260,7 @@ export function Guidance({ level, beats, onContinue, onOpenLogbook }: GuidancePr
             Play with the buttons on the board below. Nothing is scored: a move that fails only shows you a rule.
           </p>
         )}
-        <Hints key={stage.id} hints={stage.hints} />
+        <Hints key={stage.id} hints={stage.hints} onLast={onReturn} />
       </>
     )
   } else if ('log' in beat) {
@@ -184,7 +282,7 @@ export function Guidance({ level, beats, onContinue, onOpenLogbook }: GuidancePr
       aria-label="Guidance"
       aria-live="polite"
     >
-      {recap && <Recap run={recap.run} result={recap.result} />}
+      {recap && <Recap run={recap.run} result={recap.result} guided={guided} />}
       <div className="guidance-now">{body}</div>
     </section>
   )

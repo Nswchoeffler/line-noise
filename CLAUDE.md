@@ -60,6 +60,18 @@ Decisions made since the brief:
 - **Level format:** a level may carry a `puzzle` (a board and its stages),
   played by `puzzle` beats, with the predicate `solved`. Added for Level 3;
   the Level 1 and 2 files did not change.
+- **Level 4 is built** (Passwords in the Clear), ahead of the v0.2 list in
+  the brief. It is a short board puzzle, then a search of the lab's own files
+  from the defender's seat, then the printout. The intruder's search is read
+  on paper; the player runs the same search as an audit of `granite`.
+- **Scaffolded levels use the prompt beat.** The interface shows the `goal`
+  and keeps the rest as a ladder of free hints: `nudge`, then `explain`, then
+  `run`. `nudge` is a new, optional field on a prompt; nothing else in the
+  level format changed, and guided levels ignore it.
+- **The board has notes and codes.** A spot may be `covered` (it must be
+  looked into), a card may be `found` (not written by the player) and may
+  `tell` a code, and a code is one more badge. A board supplies only the
+  lines it can print.
 - **Focus moves with the step.** The desk moves keyboard focus in a layout
   effect, in the same instant a step changes, never a frame later. A delay
   let fast input land in the wrong place and made the end-to-end tests flaky.
@@ -120,7 +132,7 @@ Decisions made since the brief:
 
 ## Do not build yet
 
-- Levels 4 and up, or any engine feature only they need.
+- Levels 5 and up, or any engine feature only they need.
 - Pager, phone, network map, real-time intruder playback.
 - Accounts, backend, analytics, leaderboards.
 - Sound, animation beyond basics, a phone layout.

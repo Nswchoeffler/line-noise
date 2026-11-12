@@ -9,7 +9,7 @@ test('Level 2 can be played from briefing to debrief with the keyboard alone', a
   await finishLevel1(page)
 
   // The briefing.
-  await expect(page.getByText('Level 2 of 3')).toBeVisible()
+  await expect(page.getByText('Level 2 of 4')).toBeVisible()
   await expect(page.getByText('An account does not appear by itself.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Begin' })).toBeFocused()
   await page.keyboard.press('Enter')
@@ -96,6 +96,6 @@ test('Level 2 can be played from briefing to debrief with the keyboard alone', a
   await expect(page.getByRole('heading', { name: 'Dormant accounts and drifting clocks' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Next level' })).toBeFocused()
   await page.keyboard.press('Enter')
-  await expect(page.getByText('Level 3 of 3')).toBeVisible()
+  await expect(page.getByText('Level 3 of 4')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Borrowed Authority' })).toBeVisible()
 })

@@ -4,7 +4,7 @@ NAME
      grep - print lines that match a pattern
 
 SYNOPSIS
-     grep [-ivcn] pattern [file ...]
+     grep [-ivcnl] pattern [file ...]
 
 DESCRIPTION
      Prints every line that contains the pattern, and nothing else. If
@@ -14,13 +14,19 @@ DESCRIPTION
      -v     print the lines that do NOT match
      -c     print only a count of matching lines
      -n     put the number of each line in front of it
+     -l     print only the names of the files that have a match
 
      Put the pattern in quotes if it has spaces in it.
+
+     Given more than one file, grep puts the file's name and a colon
+     in front of each line it prints. A * in a file name stands for
+     every name: /home/*/* is every file in every directory in /home.
 
 EXAMPLES
      grep marge /usr/adm/usage.log
      grep -c ttyh0 /usr/adm/usage.log
      grep "Aug 25" /usr/adm/usage.log
+     grep -i -l welcome /home/*/*
 
 SEE ALSO
      cut(1), sort(1)

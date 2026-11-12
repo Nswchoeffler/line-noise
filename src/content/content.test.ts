@@ -94,6 +94,7 @@ describe('the world', () => {
       'L01-the-discrepancy',
       'L02-the-account-nobody-opened',
       'L03-borrowed-authority',
+      'L04-passwords-in-the-clear',
     ])
   })
 

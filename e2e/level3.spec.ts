@@ -29,7 +29,7 @@ test('Level 3 can be played from briefing to debrief with the keyboard alone', a
   await finishLevel2(page)
 
   // The briefing.
-  await expect(page.getByText('Level 3 of 3')).toBeVisible()
+  await expect(page.getByText('Level 3 of 4')).toBeVisible()
   await expect(page.getByText('An ordinary account cannot turn itself into root.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Begin' })).toBeFocused()
   await page.keyboard.press('Enter')
@@ -157,15 +157,15 @@ test('Level 3 can be played from briefing to debrief with the keyboard alone', a
   await page.keyboard.press('Tab')
   await page.keyboard.press('Enter')
 
-  // Marge's decision, the card, and the end of the levels so far.
+  // Marge's decision, the card, and on to the next level.
   await heard(page, 'So the hole stays open on granite')
   await expect(page.getByRole('heading', { name: 'Borrowed authority', exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Finish' })).toBeFocused()
+  await expect(page.getByRole('button', { name: 'Next level' })).toBeFocused()
   await page.keyboard.press('Enter')
-  await expect(page.getByRole('heading', { name: 'That is every level so far' })).toBeVisible()
+  await expect(page.getByText('Level 4 of 4')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Passwords in the Clear' })).toBeVisible()
 
   // All three cards are in the binder.
-  await page.getByRole('button', { name: 'Back to the desk' }).click()
   await page.getByRole('button', { name: 'Begin' }).click()
   await page.getByRole('tab', { name: 'Binder' }).click()
   await page.getByRole('button', { name: 'Cards' }).click()

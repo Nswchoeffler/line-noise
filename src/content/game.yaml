@@ -16,6 +16,7 @@ levels:
   - levels/L01-the-discrepancy.yaml
   - levels/L02-the-account-nobody-opened.yaml
   - levels/L03-borrowed-authority.yaml
+  - levels/L04-passwords-in-the-clear.yaml
 
 credits:
   text: Inspired by the 1986 Lawrence Berkeley Laboratory intrusion.

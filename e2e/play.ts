@@ -46,6 +46,18 @@ export async function pin(page: Page, line: RegExp): Promise<void> {
   await expect(output(page)).toContainText('(pinned as evidence)')
 }
 
+/** Press Continue on what is being said, and wait for the next thing to take its place. */
+async function next(page: Page): Promise<void> {
+  const before = await guidance(page).innerText()
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await expect(guidance(page)).not.toHaveText(before)
+}
+
+/** Make moves on the whiteboard, by the names on their buttons. */
+async function moves(page: Page, names: (string | RegExp)[]): Promise<void> {
+  for (const name of names) await page.locator('#board').getByRole('button', { name, exact: true }).click()
+}
+
 /** Enter lines at the terminal as fast as possible, pressing Continue whenever someone speaks. */
 async function rush(page: Page, lines: string[]): Promise<void> {
   const next = page.getByRole('button', { name: 'Continue' })
@@ -138,4 +150,45 @@ export async function finishLevel2(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Continue' }).click()
   await page.getByRole('button', { name: 'Next level' }).click()
   await expect(page.getByRole('heading', { name: 'Borrowed Authority' })).toBeVisible()
+}
+
+/** From the briefing of Level 3 to the briefing of Level 4. */
+export async function finishLevel3(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Begin' }).click()
+  await next(page)
+  await moves(page, ['Control Room'])
+  await next(page)
+  await moves(page, ['“Hello from the Lobby.”', 'duty board'])
+  await next(page)
+  await moves(page, ['“Give a MASTER badge to whoever is waiting in the Lobby.”', 'round hook', 'Wait for the next round'])
+  await next(page)
+  await moves(page, ['Control Room', '“Check the boilers.”', 'round hook'])
+  await next(page)
+  await moves(page, [/Take Dot's loaned badge away/])
+  await rush(page, ['ls -l /usr/local/bin/mvmail', 'ls -l /usr/lib/atrun'])
+
+  const entries: [string, string[]][] = [
+    ['pieces', ['mvmail', 'atrun']],
+    ['bit', ['s', 'root']],
+  ]
+  for (const [entry, values] of entries) {
+    for (const [blank, value] of values.entries()) {
+      await page.locator(`#entry-${entry}`).getByRole('textbox', { name: `Blank ${blank + 1}` }).fill(value)
+    }
+    await page.locator(`#entry-${entry}`).getByRole('button', { name: 'Check' }).click()
+    await expect(page.locator(`#entry-${entry}`)).toContainText('Logged')
+  }
+  for (const option of [/runs with root's authority, whoever starts it/, /wherever it is told/, /runs the job file every few minutes/]) {
+    await page.getByRole('checkbox', { name: option }).check()
+  }
+  await page.locator('#entry-conditions').getByRole('button', { name: 'Check' }).click()
+  await page.getByRole('button', { name: 'Pin a line' }).click()
+  await page.getByRole('tab', { name: /Printout tray/ }).click()
+  await page.getByRole('button', { name: /^Pin as evidence: 02:19 granite\$ mvmail/ }).click()
+  await expect(page.locator('#entry-proof')).toContainText('Logged')
+  await page.locator('#entry-fix textarea').fill('Take the setuid bit off mvmail.')
+  await page.locator('#entry-fix').getByRole('button', { name: 'Check' }).click()
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await page.getByRole('button', { name: 'Next level' }).click()
+  await expect(page.getByRole('heading', { name: 'Passwords in the Clear' })).toBeVisible()
 }

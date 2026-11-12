@@ -68,6 +68,14 @@ describe('grep', () => {
     expect(t.run('grep -n here log other').stdout).toBe('other:1:bob was here\n')
   })
 
+  it('names the files that have a match with -l, once each, and prints no lines', () => {
+    expect(t.run('grep -l bob log other').stdout).toBe('log\nother\n')
+    expect(t.run('grep -l carol log other').stdout).toBe('log\n')
+    expect(t.run('grep -il ALICE log').stdout).toBe('log\n')
+    expect(t.run('grep -l nobody log other')).toMatchObject({ stdout: '', status: 1 })
+    expect(t.run('cat log | grep -l bob').stdout).toBe('(standard input)\n')
+  })
+
   it('works with wildcards for the file list', () => {
     expect(t.run('grep -c bob *').stdout).toBe('log:2\nother:1\n')
   })
@@ -91,7 +99,7 @@ describe('grep', () => {
 
   it('needs a pattern, and something to search', () => {
     expect(t.run('grep').stderr).toBe(
-      'grep: needs a pattern to search for\nusage: grep [-ivcn] pattern [file ...]\n',
+      'grep: needs a pattern to search for\nusage: grep [-ivcnl] pattern [file ...]\n',
     )
     expect(t.run('grep bob').stderr).toContain('nothing to read')
   })

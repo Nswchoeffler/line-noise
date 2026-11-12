@@ -158,8 +158,10 @@ function LevelDesk({ game, gameState }: { game: Game; gameState: GameState }) {
         <Guidance
           level={level}
           beats={loaded.level.beats}
+          mode={loaded.level.mode}
           onContinue={() => session.continue()}
           onOpenLogbook={() => showTab('logbook', true)}
+          onReturn={focusTerminal}
         />
         {showBoard && level.puzzle ? (
           <div className="desk-terminal desk-board">

@@ -5,8 +5,10 @@
 // It is the permission model again, with the computer taken away. A door is a
 // permission check; a badge is an identity; a courier with a loaned badge acts
 // with someone else's authority; the round is work done on a timer with full
-// authority. What the pieces are called, and every word the player reads, is
-// in the level file. Nothing here knows any story.
+// authority. A card may also be something found, not written: a note left
+// lying about, which tells whoever reads it a code that opens a door. A code
+// is one more badge. What the pieces are called, and every word the player
+// reads, is in the level file. Nothing here knows any story.
 
 import { z } from 'zod'
 
@@ -31,13 +33,22 @@ const SpotSchema = z.strictObject({
   holds: z.string().nullable().default(null),
   /** When that card was put there, in whatever words suit: "March", "02:00". Play replaces it with the clock. */
   changed: z.string().nullable().default(null),
+  /**
+   * What is here cannot be read from across the board: a drawer, a
+   * pigeonhole. The player has to be in the room and look.
+   */
+  covered: z.boolean().default(false),
 })
 
-/** A kind of card the player can write. */
+/** A kind of card: one the player can write, or one that is found lying about. */
 const CardSchema = z.strictObject({
   text: z.string(),
   /** What following the card does: hand a badge to the player, if they are in this room. */
   grants: z.strictObject({ badge: z.string(), in: z.string() }).optional(),
+  /** What reading the card tells the reader: a code, which is held like a badge from then on. */
+  tells: z.string().optional(),
+  /** Somebody else's card, there to be found. The player cannot write one. */
+  found: z.boolean().default(false),
 })
 
 const CourierSchema = z.strictObject({
@@ -64,11 +75,14 @@ const RoundSchema = z.strictObject({
 
 /**
  * Every sentence the board can print, with {placeholders} the engine fills
- * in. All are required, so a board can never print something unwritten.
+ * in. A board must supply each one it could ever print, so that it can never
+ * print something unwritten: see `neededLines`.
  */
 export const LINE_KEYS = [
   'you_enter', // {badge} {room}
   'you_refused', // {badge} {room}
+  'you_read', // {spot} {room} {card}
+  'you_learn', // {badge}
   'you_write', // {card}
   'you_place', // {spot} {room}
   'you_replace', // {spot} {room} {old}
@@ -95,8 +109,32 @@ export const LINE_KEYS = [
 export type LineKey = (typeof LINE_KEYS)[number]
 
 const LinesSchema = z.strictObject(
-  Object.fromEntries(LINE_KEYS.map((key) => [key, z.string()])) as Record<LineKey, z.ZodString>,
+  Object.fromEntries(LINE_KEYS.map((key) => [key, z.string().optional()])) as Record<
+    LineKey,
+    z.ZodOptional<z.ZodString>
+  >,
 )
+
+const FIX_LINES: readonly LineKey[] = ['fix_change', 'fix_try', 'fix_worked', 'fix_held']
+
+/** The sentences a board could print, given what is on it. */
+function neededLines(board: {
+  spots: Record<string, { covered: boolean }>
+  cards: Record<string, { found: boolean }>
+  courier: unknown
+  round: unknown
+}): LineKey[] {
+  const needed: LineKey[] = ['you_enter', 'you_refused']
+  const spots = Object.values(board.spots)
+  const writes = spots.length > 0 && Object.values(board.cards).some((card) => !card.found)
+  if (spots.some((spot) => spot.covered)) needed.push('you_read', 'you_learn')
+  if (writes) needed.push('you_write', 'you_place', 'you_replace')
+  if (writes && board.courier !== null) {
+    needed.push(...LINE_KEYS.filter((key) => key === 'you_hand' || key.startsWith('courier_')))
+  }
+  if (board.round !== null) needed.push(...LINE_KEYS.filter((key) => key.startsWith('round_')))
+  return needed
+}
 
 export const BoardSpecSchema = z
   .strictObject({
@@ -127,6 +165,7 @@ export const BoardSpecSchema = z
       if (spot.holds !== null) check('card', spot.holds, board.cards, `spot ${id}`)
     }
     for (const [id, card] of Object.entries(board.cards)) {
+      if (card.tells !== undefined) check('badge', card.tells, board.badges, `card ${id}`)
       if (!card.grants) continue
       check('badge', card.grants.badge, board.badges, `card ${id}`)
       check('room', card.grants.in, board.rooms, `card ${id}`)
@@ -141,6 +180,11 @@ export const BoardSpecSchema = z
       check('badge', board.round.badge, board.badges, 'round')
       check('spot', board.round.reads, board.spots, 'round')
     }
+    for (const key of neededLines(board)) {
+      if (board.lines[key] === undefined) {
+        ctx.addIssue({ code: 'custom', message: `lines: this board can print "${key}", which is not written` })
+      }
+    }
   })
 
 export type BoardSpec = z.infer<typeof BoardSpecSchema>
@@ -151,6 +195,8 @@ export type BoardSpec = z.infer<typeof BoardSpecSchema>
 export const MoveSchema = z.discriminatedUnion('do', [
   /** Walk to a room. Its door reads the player's badge. */
   z.strictObject({ do: z.literal('go'), room: z.string() }),
+  /** Look at what is on a covered spot in the room the player is in. */
+  z.strictObject({ do: z.literal('read'), spot: z.string() }),
   /** Write a card of some kind. It is now in the player's hand. */
   z.strictObject({ do: z.literal('write'), card: z.string() }),
   /** Put the card in hand on a spot in the room the player is in. */
@@ -289,6 +335,13 @@ export const PuzzleSchema = z
       }
       if (stage.fix && Object.keys(stage.fix.changes).length < 2) {
         fail(`stage ${stage.id}: a fix stage needs at least two changes to choose from`)
+      }
+      if (stage.fix) {
+        for (const key of FIX_LINES) {
+          if (boards.some((board) => board.lines[key] === undefined)) {
+            fail(`stage ${stage.id}: a fix stage prints "${key}", which is not written`)
+          }
+        }
       }
     }
   })

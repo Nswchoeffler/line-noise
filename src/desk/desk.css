@@ -417,6 +417,18 @@ a {
   color: var(--ink-dim);
 }
 
+/* Something not yet looked at: the same slip, face down. */
+.board-spot-covered {
+  background: transparent;
+  border: 1px dashed var(--ink-dim);
+  border-left-width: 4px;
+  color: var(--ink-dim);
+}
+
+.guidance-hint-list .guidance-command {
+  margin: 0.3rem 0 0;
+}
+
 /*
  * Under the rooms: the moves on the left and what they did on the right, so
  * the result of a move is always beside the button that made it.

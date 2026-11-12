@@ -34,6 +34,8 @@ export interface BoardState {
   clock: number
   /** Rooms whose door has refused the player. */
   turnedAway: readonly string[]
+  /** Covered spots the player has looked at, and so knows the contents of. */
+  seen: readonly string[]
   log: readonly BoardLine[]
 }
 
@@ -41,6 +43,14 @@ export interface BoardState {
 export type BoardMove = Exclude<Move, { do: 'fix' } | { do: 'reset' }>
 
 const two = (n: number): string => String(n).padStart(2, '0')
+
+/** One of the board's sentences, with its {placeholders} filled in. */
+function written(board: BoardSpec, key: LineKey, values: Record<string, string> = {}): BoardLine {
+  const template = board.lines[key]
+  // A board's description is checked for every sentence it could print.
+  if (template === undefined) throw new Error(`the board has no line written for "${key}"`)
+  return { key, text: template.replace(/\{([a-z_]+)\}/g, (whole, name: string) => values[name] ?? whole) }
+}
 
 /** Minutes since midnight as hh:mm. */
 export function clockText(minutes: number): string {
@@ -59,6 +69,7 @@ export function initialState(board: BoardSpec): BoardState {
     ),
     clock: hours! * 60 + minutes!,
     turnedAway: [],
+    seen: [],
     log: [],
   }
 }
@@ -69,9 +80,16 @@ export function legalMoves(board: BoardSpec, state: BoardState): BoardMove[] {
   for (const room of Object.keys(board.rooms)) {
     if (room !== state.room) moves.push({ do: 'go', room })
   }
+  // Looking is for what cannot be read from across the board, and only once.
+  for (const [id, spot] of Object.entries(board.spots)) {
+    const looked = state.seen.includes(id)
+    if (spot.covered && spot.room === state.room && state.spots[id]!.card !== null && !looked) {
+      moves.push({ do: 'read', spot: id })
+    }
+  }
   // A card is only worth writing when there is somewhere for a card to go.
   if (Object.keys(board.spots).length > 0) {
-    for (const card of Object.keys(board.cards)) moves.push({ do: 'write', card })
+    for (const [id, card] of Object.entries(board.cards)) if (!card.found) moves.push({ do: 'write', card: id })
   }
   if (state.hand !== null) {
     for (const [id, spot] of Object.entries(board.spots)) {
@@ -89,6 +107,7 @@ function sameMove(a: BoardMove, b: BoardMove): boolean {
   if (a.do !== b.do) return false
   if (a.do === 'go' && b.do === 'go') return a.room === b.room
   if (a.do === 'write' && b.do === 'write') return a.card === b.card
+  if (a.do === 'read' && b.do === 'read') return a.spot === b.spot
   if ((a.do === 'place' && b.do === 'place') || (a.do === 'send' && b.do === 'send')) return a.spot === b.spot
   return true
 }
@@ -102,8 +121,7 @@ export function step(board: BoardSpec, state: BoardState, move: BoardMove): Boar
 
   const log = [...state.log]
   const say = (key: LineKey, values: Record<string, string> = {}): void => {
-    const text = board.lines[key].replace(/\{([a-z_]+)\}/g, (whole, name: string) => values[name] ?? whole)
-    log.push({ key, text })
+    log.push(written(board, key, values))
   }
   const badgeName = (id: string): string => board.badges[id] ?? id
   /** The badge among these that opens a room, if any does. */
@@ -115,9 +133,12 @@ export function step(board: BoardSpec, state: BoardState, move: BoardMove): Boar
 
   /** Put a card on a spot, giving back the text of any card it replaces. */
   let spots = state.spots
+  let seen = state.seen
   const put = (spotId: string, card: string): string | null => {
     const old = spots[spotId]!.card
     spots = { ...spots, [spotId]: { card, changed: clockText(state.clock) } }
+    // What is there now is not what was looked at before.
+    seen = seen.filter((id) => id !== spotId)
     return old === null ? null : board.cards[old]!.text
   }
 
@@ -133,6 +154,19 @@ export function step(board: BoardSpec, state: BoardState, move: BoardMove): Boar
     return { ...state, room: move.room, log }
   }
 
+  if (move.do === 'read') {
+    const spot = board.spots[move.spot]!
+    const card = board.cards[state.spots[move.spot]!.card!]!
+    say('you_read', { spot: spot.name, room: board.rooms[spot.room]!.name, card: card.text })
+    // A code that has been read is held from then on, like any badge.
+    let badges = state.badges
+    if (card.tells !== undefined && !badges.includes(card.tells)) {
+      badges = [...badges, card.tells]
+      say('you_learn', { badge: badgeName(card.tells) })
+    }
+    return { ...state, badges, seen: [...state.seen, move.spot], log }
+  }
+
   if (move.do === 'write') {
     say('you_write', { card: board.cards[move.card]!.text })
     return { ...state, hand: move.card, log }
@@ -144,7 +178,7 @@ export function step(board: BoardSpec, state: BoardState, move: BoardMove): Boar
     const values = { spot: spot.name, room: board.rooms[spot.room]!.name }
     if (old === null) say('you_place', values)
     else say('you_replace', { ...values, old })
-    return { ...state, hand: null, spots, log }
+    return { ...state, hand: null, spots, seen, log }
   }
 
   if (move.do === 'send') {
@@ -175,7 +209,7 @@ export function step(board: BoardSpec, state: BoardState, move: BoardMove): Boar
     const old = put(move.spot, state.hand!)
     if (old === null) say('courier_delivers', names)
     else say('courier_replaces', { ...names, old })
-    return { ...state, hand: null, spots, log }
+    return { ...state, hand: null, spots, seen, log }
   }
 
   // Wait: the clock runs on to the next round, and the round is made.
@@ -269,10 +303,7 @@ export function playMove(puzzle: Puzzle, play: StagePlay, move: Move): StagePlay
     // Make the change, then let the trick be played against the changed
     // board from the beginning. Whether it still works is up to the rules.
     const board = boardFor(puzzle, stage, move.change)
-    const line = (key: LineKey, values: Record<string, string> = {}): BoardLine => ({
-      key,
-      text: board.lines[key].replace(/\{([a-z_]+)\}/g, (whole, name: string) => values[name] ?? whole),
-    })
+    const line = (key: LineKey, values: Record<string, string> = {}): BoardLine => written(board, key, values)
     let state = initialState(board)
     state = { ...state, log: [line('fix_change', { change: stage.fix.changes[move.change]!.text }), line('fix_try')] }
     for (const trickMove of stage.fix.trick) {

@@ -50,7 +50,8 @@ describe('a board description', () => {
   it('fills in what is left out', () => {
     const spec = board({ courier: undefined, round: undefined, start: undefined })
     expect(spec).toMatchObject({ courier: null, round: null, start: '00:00' })
-    expect(spec.spots['shelf']).toEqual({ name: 'shelf', room: 'hall', holds: null, changed: null })
+    expect(spec.spots['shelf']).toEqual({ name: 'shelf', room: 'hall', holds: null, changed: null, covered: false })
+    expect(spec.cards['sweep']).toEqual({ text: 'Sweep up.', found: false })
   })
 
   it('refuses a board that refers to things that are not on it', () => {
@@ -65,6 +66,100 @@ describe('a board description', () => {
   it('needs every line the board can print', () => {
     const { you_enter: _dropped, ...rest } = LINES
     expect(() => board({ lines: rest })).toThrow('you_enter')
+    const { courier_declines: _courier, ...noCourier } = LINES
+    expect(() => board({ lines: noCourier })).toThrow('courier_declines')
+    const { round_empty: _round, ...noRound } = LINES
+    expect(() => board({ lines: noRound })).toThrow('round_empty')
+  })
+
+  it('needs no line for something that is not on the board', () => {
+    const { you_enter, you_refused } = LINES
+    const bare = { ...BOARD, spots: {}, cards: {}, courier: null, round: null, lines: { you_enter, you_refused } }
+    expect(BoardSpecSchema.parse(bare).lines).toEqual({ you_enter, you_refused })
+    // Somewhere to look means the lines for looking.
+    const drawer = { drawer: { name: 'drawer', room: 'hall', holds: 'memo', covered: true } }
+    const memo = { memo: { text: 'A memo.', found: true } }
+    expect(() => BoardSpecSchema.parse({ ...bare, spots: drawer, cards: memo })).toThrow('you_read')
+  })
+
+  it('checks that a note tells a code the board knows', () => {
+    expect(() => board({ cards: { ...BOARD.cards, memo: { text: 'A memo.', tells: 'brass', found: true } } })).toThrow(
+      /no badge called .*brass/,
+    )
+  })
+})
+
+// Notes left lying about: a drawer in the hall, and a locker in the vault,
+// each holding somebody else's card. One of them gives away the gold code.
+const NOTES = {
+  spots: {
+    ...BOARD.spots,
+    drawer: { name: 'drawer', room: 'hall', holds: 'memo', covered: true },
+    locker: { name: 'locker', room: 'vault', holds: 'chit', covered: true },
+  },
+  cards: {
+    ...BOARD.cards,
+    memo: { text: 'The vault code is gold.', tells: 'gold', found: true },
+    chit: { text: 'Milk, two pints.', found: true },
+  },
+  courier: null,
+  round: null,
+}
+
+describe('notes left lying about', () => {
+  it('can be looked at only from the room they are in, and only while unread', () => {
+    const spec = board(NOTES)
+    const reads = (state: BoardState): Move[] => legalMoves(spec, state).filter((m) => m.do === 'read')
+    expect(reads(initialState(spec))).toEqual([{ do: 'read', spot: 'drawer' }])
+    // The locker is behind a door, and an open shelf needs no looking at.
+    const fresh = initialState(spec)
+    expect(step(spec, fresh, { do: 'read', spot: 'locker' })).toBe(fresh)
+    expect(step(spec, fresh, { do: 'read', spot: 'shelf' })).toBe(fresh)
+    const looked = step(spec, fresh, { do: 'read', spot: 'drawer' })
+    expect(looked.seen).toEqual(['drawer'])
+    expect(reads(looked)).toEqual([])
+  })
+
+  it('tell the reader a code, which opens a door like any badge', () => {
+    const spec = board(NOTES)
+    expect(after(spec, { do: 'go', room: 'vault' }).room).toBe('hall')
+    const state = after(spec, { do: 'read', spot: 'drawer' }, { do: 'go', room: 'vault' })
+    expect(keys(state)).toEqual(['you_read', 'you_learn', 'you_enter'])
+    expect(state.log[0]!.text).toContain('Hall|drawer|The vault code is gold.')
+    expect(state.log[1]!.text).toContain('GOLD')
+    expect(state.badges).toEqual(['tin', 'gold'])
+    expect(state.room).toBe('vault')
+    expect(holdsAll(state, [{ player_has: 'gold' }, { player_in: 'vault' }])).toBe(true)
+  })
+
+  it('say nothing new to someone who has the code already, or when they hold no code', () => {
+    const knows = board({ ...NOTES, player: { room: 'hall', badges: ['tin', 'gold'] } })
+    const again = after(knows, { do: 'read', spot: 'drawer' })
+    expect(keys(again)).toEqual(['you_read'])
+    expect(again.badges).toEqual(['tin', 'gold'])
+    const plain = after(knows, { do: 'go', room: 'vault' }, { do: 'read', spot: 'locker' })
+    expect(keys(plain)).toEqual(['you_enter', 'you_read'])
+    expect(plain.badges).toEqual(['tin', 'gold'])
+  })
+
+  it('cannot be written by the player, and an empty spot has nothing to look at', () => {
+    const spec = board(NOTES)
+    const writes = legalMoves(spec, initialState(spec)).filter((m) => m.do === 'write')
+    expect(writes).toEqual([
+      { do: 'write', card: 'sweep' },
+      { do: 'write', card: 'key' },
+    ])
+    const fresh = initialState(spec)
+    expect(step(spec, fresh, { do: 'write', card: 'memo' })).toBe(fresh)
+    const empty = board({ ...NOTES, spots: { ...NOTES.spots, drawer: { name: 'drawer', room: 'hall', covered: true } } })
+    expect(legalMoves(empty, initialState(empty)).filter((m) => m.do === 'read')).toEqual([])
+  })
+
+  it('must be looked at again once something else has been put there', () => {
+    const spec = board(NOTES)
+    const state = after(spec, { do: 'read', spot: 'drawer' }, { do: 'write', card: 'sweep' }, { do: 'place', spot: 'drawer' })
+    expect(state.seen).toEqual([])
+    expect(legalMoves(spec, state)).toContainEqual({ do: 'read', spot: 'drawer' })
   })
 })
 

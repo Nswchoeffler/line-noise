@@ -121,12 +121,18 @@ const SayBeat = z.strictObject({
  * A command is suggested and explained, then the player types it. The beat
  * is done when `done` holds, however the player got there. Without `done`,
  * it is done when the suggested program runs successfully.
+ *
+ * How much of this is shown is up to the interface. A guided level shows all
+ * of it. A scaffolded level shows the goal, and keeps the rest as a ladder of
+ * free hints: the nudge, then how the command works, then the command.
  */
 const PromptBeat = z.strictObject({
   prompt: z.strictObject({
     who: z.string().optional(),
     /** What the player is trying to do, in plain words. */
     goal: z.string(),
+    /** A first hint that points the way without naming the command. Used from scaffolded mode on. */
+    nudge: z.string().optional(),
     /** The command to type. */
     run: z.string(),
     /** What the command does, piece by piece. Shown before it is typed. */

@@ -47,9 +47,9 @@ export const grep: Program = {
   name: 'grep',
   path: '/bin/grep',
   summary: 'print lines that match a pattern',
-  usage: 'grep [-ivcn] pattern [file ...]',
+  usage: 'grep [-ivcnl] pattern [file ...]',
   run(ctx) {
-    const { flags, operands } = parseArgs(ctx.args, 'ivcn')
+    const { flags, operands } = parseArgs(ctx.args, 'ivcnl')
     const [pattern, ...files] = operands
     if (pattern === undefined) throw new UsageError('needs a pattern to search for')
 
@@ -72,11 +72,14 @@ export const grep: Program = {
       toLines(input.content).forEach((line, index) => {
         if (regex.test(line) === invert) return
         count++
-        if (!flags.has('c')) {
+        if (!flags.has('c') && !flags.has('l')) {
           stdout += `${prefix}${flags.has('n') ? `${index + 1}:` : ''}${line}\n`
         }
       })
-      if (flags.has('c')) stdout += `${prefix}${count}\n`
+      // -l names each file that has a match, once, and prints no lines.
+      if (flags.has('l')) {
+        if (count > 0) stdout += `${input.name ?? '(standard input)'}\n`
+      } else if (flags.has('c')) stdout += `${prefix}${count}\n`
       if (count > 0) matched = true
     }
 
